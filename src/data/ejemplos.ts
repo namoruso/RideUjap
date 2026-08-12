@@ -28,3 +28,28 @@ export const viajeEjemplo: Viaje = {
   idVehiculo: vehiculoEjemplo.id,
   estado: 'disponible',
 }
+
+/** Sample trips for the Viajes list (repeating card pattern) */
+export const viajesEjemplo: Viaje[] = [
+  viajeEjemplo,
+  {
+    id: 2,
+    origen: 'Facultad de Ingeniería',
+    destino: 'San Diego',
+    hora: '12:15',
+    cuposDisponibles: 2,
+    idConductor: conductorEjemplo.id,
+    idVehiculo: vehiculoEjemplo.id,
+    estado: 'disponible',
+  },
+  {
+    id: 3,
+    origen: 'Biblioteca UJAP',
+    destino: 'Prebo',
+    hora: '18:00',
+    cuposDisponibles: 1,
+    idConductor: conductorEjemplo.id,
+    idVehiculo: vehiculoEjemplo.id,
+    estado: 'disponible',
+  },
+]
