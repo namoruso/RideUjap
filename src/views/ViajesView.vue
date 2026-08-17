@@ -20,8 +20,15 @@ const filtroActivo = ref<FiltroType>({
 
 const viajesVisibles = computed(() => store.viajesFiltrados(filtroActivo.value))
 
+const resetFiltros = ref(0)
+
 function handleFiltrar(criterios: FiltroType) {
   filtroActivo.value = criterios
+}
+
+function verTodas() {
+  filtroActivo.value = { origen: '', destino: '', hora: '' }
+  resetFiltros.value += 1
 }
 
 function handleUnirse(id: number) {
@@ -34,29 +41,27 @@ onMounted(() => store.cargarViajes())
 <template>
   <main class="viajes-view page-content">
     <EncabezadoRide
-      titulo="Busca un asiento"
-      subtitulo="Filtra por zona y hora de clase. Solo verás rutas de gente de la UJAP."
+      titulo="Viajes"
+      subtitulo="Elige zona y hora. Las rutas son de gente de la UJAP."
     />
 
-    <FiltroViajes :inicial="filtroActivo" @filtrar="handleFiltrar" />
+    <p v-if="store.usandoDemo" class="aviso-demo" role="status">
+      Estás viendo rutas de ejemplo. Cuando el servidor esté arriba, se cargan las reales.
+    </p>
+
+    <FiltroViajes :key="resetFiltros" :inicial="filtroActivo" @filtrar="handleFiltrar" />
 
     <section class="seccion-viajes" aria-label="Lista de viajes">
-      <div v-if="store.cargando" class="estado-carga" role="status">
-        <span>Buscando rutas…</span>
-      </div>
-
-      <div v-else-if="store.error" class="estado-error" role="alert">
-        <p>No pudimos cargar las rutas. Reintenta en un momento.</p>
-        <button type="button" class="btn-reintentar" @click="store.cargarViajes()">
-          Reintentar
-        </button>
-      </div>
+      <div v-if="store.cargando" class="estado-carga" role="status">Buscando asientos…</div>
 
       <template v-else>
-        <p class="conteo" aria-live="polite">
-          {{ viajesVisibles.length }}
-          {{ viajesVisibles.length === 1 ? 'viaje encontrado' : 'viajes encontrados' }}
-        </p>
+        <div class="toolbar">
+          <p class="conteo" aria-live="polite">
+            <strong>{{ viajesVisibles.length }}</strong>
+            {{ viajesVisibles.length === 1 ? 'ruta' : 'rutas' }}
+          </p>
+          <RouterLink to="/publicar" class="link-publicar">Publicar la mía</RouterLink>
+        </div>
 
         <div v-if="viajesVisibles.length > 0" class="lista-viajes">
           <TarjetaViaje
@@ -70,8 +75,12 @@ onMounted(() => store.cargarViajes())
         <EstadoVacio
           v-else
           titulo="Nada con esos filtros"
-          mensaje="Prueba otra zona u hora, o publica tú la ruta que te hace falta."
-        />
+          mensaje="Cambia la zona o la hora, o publica tú el asiento que te hace falta."
+        >
+          <template #accion>
+            <button type="button" class="btn-reintentar" @click="verTodas">Ver todas</button>
+          </template>
+        </EstadoVacio>
       </template>
     </section>
   </main>
@@ -80,57 +89,82 @@ onMounted(() => store.cargarViajes())
 <style scoped>
 .viajes-view {
   width: 100%;
+  max-width: 72rem;
+}
+
+.aviso-demo {
+  margin: 0 0 1rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  background: var(--ride-green-light);
+  color: var(--ride-green-fg);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .seccion-viajes {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
+}
+
+.toolbar {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .conteo {
-  font-size: 0.875rem;
+  margin: 0;
+  font-size: 0.9rem;
   color: var(--color-text);
-  opacity: 0.7;
-  margin-bottom: 0.75rem;
+  opacity: 0.75;
+}
+
+.conteo strong {
+  color: var(--color-heading);
+  font-weight: 800;
+}
+
+.link-publicar {
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .lista-viajes {
   display: grid;
   grid-template-columns: 1fr;
-  gap: var(--ride-gap);
+  gap: 0.85rem;
 }
 
-@media (min-width: 768px) {
+@media (min-width: 720px) {
   .lista-viajes {
     grid-template-columns: 1fr 1fr;
   }
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1100px) {
   .lista-viajes {
     grid-template-columns: 1fr 1fr 1fr;
   }
 }
 
-.estado-carga,
-.estado-error {
-  padding: 2rem;
+.estado-carga {
+  padding: 2rem 1rem;
   text-align: center;
-  border-radius: var(--ride-radius-lg);
+  border-radius: 1rem;
   background: var(--color-background-soft);
-}
-
-.estado-error p {
-  color: #c0392b;
-  margin-bottom: 1rem;
+  opacity: 0.8;
 }
 
 .btn-reintentar {
-  padding: 0.5rem 1.25rem;
+  padding: 0.5rem 1.1rem;
   border: none;
-  border-radius: var(--ride-radius);
+  border-radius: 999px;
   background: var(--ride-green);
   color: #fff;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
+  font-family: inherit;
 }
 </style>

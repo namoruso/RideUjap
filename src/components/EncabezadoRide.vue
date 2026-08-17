@@ -2,12 +2,13 @@
 defineProps<{
   titulo: string
   subtitulo?: string
+  mostrarMarca?: boolean
 }>()
 </script>
 
 <template>
   <header class="encabezado-ride">
-    <p class="marca">RideUJAP</p>
+    <p v-if="mostrarMarca" class="marca">RideUJAP</p>
     <h1>{{ titulo }}</h1>
     <p v-if="subtitulo" class="subtitulo">{{ subtitulo }}</p>
   </header>
