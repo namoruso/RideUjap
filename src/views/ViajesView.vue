@@ -29,19 +29,19 @@ onMounted(() => store.cargarViajes())
 <template>
   <main class="viajes-view page-content">
     <EncabezadoRide
-      titulo="Viajes disponibles"
-      subtitulo="Encuentra un viaje compartido hacia el campus o la ciudad"
+      titulo="Busca un asiento"
+      subtitulo="Filtra por zona y hora de clase. Solo verás rutas de gente de la UJAP."
     />
 
     <FiltroViajes @filtrar="handleFiltrar" />
 
     <section class="seccion-viajes" aria-label="Lista de viajes">
       <div v-if="store.cargando" class="estado-carga" role="status">
-        <span>Cargando viajes…</span>
+        <span>Buscando rutas…</span>
       </div>
 
       <div v-else-if="store.error" class="estado-error" role="alert">
-        <p>{{ store.error }}</p>
+        <p>No pudimos cargar las rutas. Reintenta en un momento.</p>
         <button type="button" class="btn-reintentar" @click="store.cargarViajes()">
           Reintentar
         </button>
@@ -62,7 +62,11 @@ onMounted(() => store.cargarViajes())
           />
         </div>
 
-        <EstadoVacio v-else mensaje="No hay viajes que coincidan con tu búsqueda" />
+        <EstadoVacio
+          v-else
+          titulo="Nada con esos filtros"
+          mensaje="Prueba otra zona u hora, o publica tú la ruta que te hace falta."
+        />
       </template>
     </section>
   </main>

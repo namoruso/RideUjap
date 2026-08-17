@@ -24,18 +24,20 @@ defineProps<{
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: #0b6e4f;
+  color: var(--ride-green);
 }
 
 h1 {
   margin: 0;
   font-size: 1.6rem;
   line-height: 1.2;
+  color: var(--color-heading);
 }
 
 .subtitulo {
   margin: 0.4rem 0 0;
-  color: #555;
+  color: var(--color-text);
+  opacity: 0.75;
   font-size: 0.95rem;
 }
 </style>

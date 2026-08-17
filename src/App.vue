@@ -33,7 +33,9 @@ onMounted(() => {
 // ── Menú móvil ────────────────────────────────────────────────────────────────
 const menuAbierto = ref(false)
 
-function cerrarMenu() { menuAbierto.value = false }
+function cerrarMenu() {
+  menuAbierto.value = false
+}
 
 function cerrarSesion() {
   auth.cerrarSesion()
@@ -53,9 +55,10 @@ function cerrarSesion() {
 
       <!-- Nav desktop -->
       <nav class="nav-desktop" aria-label="Navegación principal">
-        <RouterLink to="/">Inicio</RouterLink>
+        <RouterLink :to="{ path: '/', hash: '#como-funciona' }">Cómo funciona</RouterLink>
         <RouterLink to="/viajes">Viajes</RouterLink>
         <template v-if="auth.estaAutenticado">
+          <RouterLink to="/inicio">Panel</RouterLink>
           <RouterLink to="/publicar">Publicar</RouterLink>
           <RouterLink to="/mis-viajes">Mis viajes</RouterLink>
         </template>
@@ -73,12 +76,40 @@ function cerrarSesion() {
           @click="toggleDark"
         >
           <!-- Sol (modo claro visible) -->
-          <svg v-if="darkMode" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          <svg
+            v-if="darkMode"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
           </svg>
           <!-- Luna (modo oscuro visible) -->
-          <svg v-else width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          <svg
+            v-else
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
           </svg>
         </button>
 
@@ -104,11 +135,34 @@ function cerrarSesion() {
           :aria-label="menuAbierto ? 'Cerrar menú' : 'Abrir menú'"
           @click="menuAbierto = !menuAbierto"
         >
-          <svg v-if="!menuAbierto" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+          <svg
+            v-if="!menuAbierto"
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
-          <svg v-else width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+          <svg
+            v-else
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
           </svg>
         </button>
       </div>
@@ -116,9 +170,12 @@ function cerrarSesion() {
 
     <!-- Menú móvil desplegable -->
     <nav v-if="menuAbierto" class="nav-movil" aria-label="Menú móvil">
-      <RouterLink to="/" @click="cerrarMenu">Inicio</RouterLink>
+      <RouterLink :to="{ path: '/', hash: '#como-funciona' }" @click="cerrarMenu"
+        >Cómo funciona</RouterLink
+      >
       <RouterLink to="/viajes" @click="cerrarMenu">Viajes</RouterLink>
       <template v-if="auth.estaAutenticado">
+        <RouterLink to="/inicio" @click="cerrarMenu">Panel</RouterLink>
         <RouterLink to="/publicar" @click="cerrarMenu">Publicar viaje</RouterLink>
         <RouterLink to="/mis-viajes" @click="cerrarMenu">Mis viajes</RouterLink>
       </template>
@@ -127,11 +184,17 @@ function cerrarSesion() {
       <div class="nav-movil-footer">
         <template v-if="auth.estaAutenticado">
           <span class="nombre-movil">{{ auth.usuario?.nombre }}</span>
-          <button type="button" class="btn-cerrar-sesion" @click="cerrarSesion">Cerrar sesión</button>
+          <button type="button" class="btn-cerrar-sesion" @click="cerrarSesion">
+            Cerrar sesión
+          </button>
         </template>
         <template v-else>
-          <RouterLink to="/login" class="btn-registrarse btn-full" @click="cerrarMenu">Iniciar sesión</RouterLink>
-          <RouterLink to="/registro" class="btn-registrarse btn-full" @click="cerrarMenu">Registrarse</RouterLink>
+          <RouterLink to="/login" class="btn-registrarse btn-full" @click="cerrarMenu"
+            >Iniciar sesión</RouterLink
+          >
+          <RouterLink to="/registro" class="btn-registrarse btn-full" @click="cerrarMenu"
+            >Registrarse</RouterLink
+          >
         </template>
       </div>
     </nav>
@@ -139,7 +202,8 @@ function cerrarSesion() {
     <RouterView />
 
     <footer class="pie">
-      <p>© 2025 RideUJAP · ETW09303 · Ingeniería en Computación · UJAP</p>
+      <p>RideUJAP · comunidad UJAP · no es un servicio de taxi</p>
+      <p class="pie-meta">© 2026 · ETW09303 · Ingeniería en Computación</p>
     </footer>
   </div>
 </template>
@@ -166,7 +230,9 @@ function cerrarSesion() {
 }
 
 @media (min-width: 768px) {
-  .topbar { padding: 0.7rem 2rem; }
+  .topbar {
+    padding: 0.7rem 2rem;
+  }
 }
 
 /* Brand */
@@ -180,7 +246,11 @@ function cerrarSesion() {
   text-decoration: none;
   flex-shrink: 0;
 }
-.brand-logo { height: 28px; width: auto; border-radius: 4px; }
+.brand-logo {
+  height: 28px;
+  width: auto;
+  border-radius: 4px;
+}
 
 /* Nav desktop */
 .nav-desktop {
@@ -190,7 +260,9 @@ function cerrarSesion() {
   margin-left: 1rem;
 }
 @media (min-width: 768px) {
-  .nav-desktop { display: flex; }
+  .nav-desktop {
+    display: flex;
+  }
 }
 
 .nav-desktop a {
@@ -199,10 +271,19 @@ function cerrarSesion() {
   padding: 0.3rem 0.65rem;
   border-radius: 6px;
   font-size: 0.9rem;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
-.nav-desktop a:hover { background: var(--color-background-soft); opacity: 1; }
-.nav-desktop a.router-link-exact-active { color: var(--ride-green); font-weight: 700; background: var(--ride-green-light); }
+.nav-desktop a:hover {
+  background: var(--color-background-soft);
+  opacity: 1;
+}
+.nav-desktop a.router-link-exact-active {
+  color: var(--ride-green);
+  font-weight: 700;
+  background: var(--ride-green-light);
+}
 
 /* Controles (dark mode + hamburguesa) */
 .controles {
@@ -261,14 +342,18 @@ function cerrarSesion() {
   cursor: pointer;
   transition: background 0.15s ease;
 }
-.btn-icon:hover { background: var(--color-background-soft); }
+.btn-icon:hover {
+  background: var(--color-background-soft);
+}
 
 /* Hamburguesa solo en móvil */
 .btn-hamburguesa {
   display: flex;
 }
 @media (min-width: 768px) {
-  .btn-hamburguesa { display: none; }
+  .btn-hamburguesa {
+    display: none;
+  }
 }
 
 /* Auth buttons */
@@ -292,7 +377,10 @@ function cerrarSesion() {
   cursor: pointer;
   font-family: inherit;
 }
-.btn-registrarse:hover { background: var(--ride-green-hover); opacity: 1; }
+.btn-registrarse:hover {
+  background: var(--ride-green-hover);
+  opacity: 1;
+}
 
 .btn-cerrar-sesion {
   padding: 0.3rem 0.75rem;
@@ -303,9 +391,16 @@ function cerrarSesion() {
   font-size: 0.85rem;
   font-family: inherit;
   cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
-.btn-cerrar-sesion:hover { background: #fee2e2; border-color: #dc2626; color: #dc2626; }
+.btn-cerrar-sesion:hover {
+  background: #fee2e2;
+  border-color: #dc2626;
+  color: #dc2626;
+}
 
 /* ── Menú móvil ── */
 .nav-movil {
@@ -317,12 +412,20 @@ function cerrarSesion() {
   animation: slideDown 0.15s ease;
 }
 @media (min-width: 768px) {
-  .nav-movil { display: none; }
+  .nav-movil {
+    display: none;
+  }
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-6px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .nav-movil a {
@@ -335,8 +438,13 @@ function cerrarSesion() {
   border-bottom: 1px solid var(--color-border);
   transition: background 0.1s ease;
 }
-.nav-movil a:hover { background: var(--color-background-soft); }
-.nav-movil a.router-link-exact-active { color: var(--ride-green); font-weight: 700; }
+.nav-movil a:hover {
+  background: var(--color-background-soft);
+}
+.nav-movil a.router-link-exact-active {
+  color: var(--ride-green);
+  font-weight: 700;
+}
 
 .nav-movil-footer {
   display: flex;
@@ -366,5 +474,9 @@ function cerrarSesion() {
   text-align: center;
   font-size: 0.8rem;
   opacity: 0.55;
+}
+
+.pie-meta {
+  margin-top: 0.25rem;
 }
 </style>

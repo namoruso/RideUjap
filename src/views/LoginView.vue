@@ -12,7 +12,7 @@ const form = reactive({ correo: '', contrasena: '' })
 async function handleSubmit() {
   const ok = await auth.iniciarSesion({ correo: form.correo, contrasena: form.contrasena })
   if (ok) {
-    const redirect = (route.query['redirect'] as string) || '/'
+    const redirect = (route.query['redirect'] as string) || '/inicio'
     router.push(redirect)
   }
 }
@@ -27,7 +27,7 @@ async function handleSubmit() {
           <span>RideUJAP</span>
         </div>
         <h1>Iniciar sesión</h1>
-        <p class="subtitulo">Bienvenido de vuelta a la comunidad UJAP</p>
+        <p class="subtitulo">Entra con tu correo UJAP para reservar o publicar un asiento</p>
       </div>
 
       <form class="auth-form" novalidate @submit.prevent="handleSubmit">
@@ -54,7 +54,9 @@ async function handleSubmit() {
             autocomplete="current-password"
           />
           <div class="olvide-link-container">
-            <RouterLink to="/recuperar" class="link-secundario">¿Olvidaste tu contraseña?</RouterLink>
+            <RouterLink to="/recuperar" class="link-secundario"
+              >¿Olvidaste tu contraseña?</RouterLink
+            >
           </div>
         </div>
 

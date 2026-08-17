@@ -54,7 +54,7 @@ Cortes internos (un commit por corte):
 |-------|-----------------|--------|
 | 1.1 Modelos | `feat(types): ampliar entidades del dominio` | Rol, facultad, tarifa, vehículo, solicitud |
 | 1.2 Datos mock | `feat(store): capa mock con localStorage` | Seed; fallback si el API falla; auth local |
-| 1.3 Home | `feat(home): landing de valor + viajes seed` | Propuesta de valor + viajes recientes |
+| 1.3 Home | `feat(ux): landing explicativa y flujo de navegación` | Landing en `/`, panel en `/inicio` |
 | 1.4 Auth UI | `feat(auth): registro y login sin servidor` | Validar `@ujap.edu.ve` en cliente |
 | 1.5 Viajes | `refactor(viajes): listado estable con mock` | Filtros / vacío / loading independientes de `:3001` |
 | 1.6 Responsive | `style(ui): mobile-first en todas las vistas` | 360 / 768 / 1024; toques ≥ 44px |
