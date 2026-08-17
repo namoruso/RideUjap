@@ -1,117 +1,169 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import IconoRide from '@/components/IconoRide.vue'
+import IlustracionHero from '@/components/IlustracionHero.vue'
 
 const auth = useAuthStore()
+const router = useRouter()
+
 const ctaPrincipal = computed(() =>
   auth.estaAutenticado
     ? { to: '/inicio', label: 'Ir a mi panel' }
     : { to: '/registro', label: 'Crear cuenta UJAP' },
 )
 
+const busqueda = reactive({
+  origen: '',
+  destino: 'Campus UJAP',
+})
+
+function buscarRuta() {
+  router.push({
+    path: '/viajes',
+    query: {
+      origen: busqueda.origen || undefined,
+      destino: busqueda.destino || undefined,
+    },
+  })
+}
+
 const pasos = [
   {
-    n: '01',
-    titulo: 'Entra con tu correo UJAP',
-    texto: 'La red es cerrada: estudiantes, profesores y personal. No es un taxi de desconocidos.',
+    n: '1',
+    nombre: 'mail' as const,
+    titulo: 'Entra con correo UJAP',
+    texto: 'Red cerrada: solo comunidad universitaria.',
   },
   {
-    n: '02',
-    titulo: 'Publica o busca una ruta',
-    texto:
-      'El conductor indica origen, destino, hora y asientos. El pasajero filtra por zona y horario de clase.',
+    n: '2',
+    nombre: 'ruta' as const,
+    titulo: 'Publica o busca',
+    texto: 'Origen, destino, hora y cupos.',
   },
   {
-    n: '03',
+    n: '3',
+    nombre: 'asiento' as const,
     titulo: 'Reserva el asiento',
-    texto:
-      'Pides el cupo. En esta versión se confirma al instante; más adelante el conductor aceptará la solicitud.',
+    texto: 'Un toque. Luego coordinan el punto.',
   },
   {
-    n: '04',
-    titulo: 'Se ven y viajan juntos',
-    texto: 'Acuerdan el punto de encuentro. El aporte cubre gasolina, no un viaje de lujo.',
+    n: '4',
+    nombre: 'encuentro' as const,
+    titulo: 'Viajan juntos',
+    texto: 'Aporte para gasolina, no tarifa de taxi.',
   },
 ]
 
 const beneficios = [
   {
+    nombre: 'escudo' as const,
     titulo: 'Comunidad de confianza',
-    texto:
-      'Viajas con gente de tu misma universidad: misma facultad, mismo campus, mismas horas pico.',
+    texto: 'Compañeros de campus, no desconocidos.',
+  },
+  { nombre: 'ahorro' as const, titulo: 'Ahorro real', texto: 'Menos que un traslado privado.' },
+  {
+    nombre: 'campus' as const,
+    titulo: 'Menos filas en la UJAP',
+    texto: 'Menos autos buscando puesto a las 7:00.',
   },
   {
-    titulo: 'Ahorro real',
-    texto: 'El pasajero paga menos que un taxi. El conductor no carga solo el tanque ni el peaje.',
+    nombre: 'hoja' as const,
+    titulo: 'Menos un carro vacío',
+    texto: 'Mismo trayecto, menor huella.',
   },
-  {
-    titulo: 'Menos filas en el campus',
-    texto: 'Menos autos en la entrada de la UJAP son menos vueltas buscando puesto a las 7:00.',
-  },
-  {
-    titulo: 'Menos humo, más charla',
-    texto: 'Se reduce la huella del trayecto y se cruzan carreras que en el pasillo no se hablan.',
-  },
-]
-
-const rutas = [
-  { origen: 'San Diego', destino: 'Campus UJAP' },
-  { origen: 'Naguanagua', destino: 'Campus UJAP' },
-  { origen: 'Valencia centro', destino: 'Campus UJAP' },
-  { origen: 'Campus UJAP', destino: 'Prebo' },
 ]
 </script>
 
 <template>
   <main class="landing">
     <section class="hero" aria-labelledby="hero-titulo">
-      <div class="inner">
-        <p class="eyebrow ride-fade-up">Red cerrada · Universidad José Antonio Páez</p>
-        <h1 id="hero-titulo" class="ride-fade-up ride-delay-1">
-          Llega al campus con compañeros, no con desconocidos
-        </h1>
-        <p class="lead ride-fade-up ride-delay-2">
-          RideUJAP conecta a quien va en carro y a quien necesita asiento, en las mismas rutas hacia
-          y desde la universidad. Menos gasto, menos impuntualidad, menos un auto vacío ocupando un
-          puesto.
-        </p>
-        <div class="hero-ctas ride-fade-up ride-delay-3">
-          <RouterLink :to="ctaPrincipal.to" class="btn btn-primary">{{
-            ctaPrincipal.label
-          }}</RouterLink>
-          <RouterLink to="/viajes" class="btn btn-ghost">Ver viajes publicados</RouterLink>
+      <div class="inner hero-grid">
+        <div class="hero-copy">
+          <p class="eyebrow ride-fade-up">Red cerrada · UJAP</p>
+          <h1 id="hero-titulo" class="ride-fade-up ride-delay-1">
+            Al campus con compañeros, no con desconocidos
+          </h1>
+          <p class="lead ride-fade-up ride-delay-2">
+            Quien ya va en carro publica la ruta. Quien necesita asiento se sube. Misma universidad,
+            mismo pico de las 7:00.
+          </p>
+          <div class="hero-ctas ride-fade-up ride-delay-3">
+            <RouterLink :to="ctaPrincipal.to" class="btn btn-primary">{{
+              ctaPrincipal.label
+            }}</RouterLink>
+            <a href="#como-funciona" class="btn btn-ghost">Cómo funciona</a>
+          </div>
+          <ul class="trust-row ride-fade-up ride-delay-4">
+            <li>
+              <IconoRide nombre="escudo" />
+              Solo @ujap.edu.ve
+            </li>
+            <li>
+              <IconoRide nombre="ahorro" />
+              Aporte a gasolina
+            </li>
+            <li>
+              <IconoRide nombre="campus" />
+              Menos un puesto
+            </li>
+          </ul>
         </div>
-        <p class="trust ride-fade-up ride-delay-4">
-          Registro con correo institucional <strong>@ujap.edu.ve</strong>. La verificación de carnet
-          llega más adelante; la comunidad ya es solo UJAP.
-        </p>
+
+        <div class="hero-visual ride-fade-up ride-delay-2">
+          <IlustracionHero />
+          <form class="buscador" @submit.prevent="buscarRuta">
+            <p class="buscador-titulo">Encuentra un asiento</p>
+            <label>
+              <span>Origen</span>
+              <input v-model="busqueda.origen" type="text" placeholder="San Diego, Naguanagua…" />
+            </label>
+            <label>
+              <span>Destino</span>
+              <input v-model="busqueda.destino" type="text" placeholder="Campus UJAP" />
+            </label>
+            <button type="submit" class="btn btn-primary btn-full">Buscar rutas</button>
+          </form>
+        </div>
       </div>
     </section>
 
     <section class="band" aria-label="Rutas frecuentes">
       <div class="inner band-row">
-        <p class="band-label">Rutas que ya se coordinan a mano</p>
-        <ul class="chips">
-          <li v-for="ruta in rutas" :key="ruta.origen + ruta.destino" class="chip">
-            {{ ruta.origen }}
-            <span class="chip-arrow" aria-hidden="true">→</span>
-            {{ ruta.destino }}
-          </li>
-        </ul>
+        <p class="band-label">Rutas típicas</p>
+        <div class="chips">
+          <button
+            v-for="ruta in ['San Diego', 'Naguanagua', 'Valencia centro', 'Prebo']"
+            :key="ruta"
+            type="button"
+            class="chip"
+            @click="
+              busqueda.origen = ruta
+              busqueda.destino = 'Campus UJAP'
+              buscarRuta()
+            "
+          >
+            {{ ruta }}
+            <span aria-hidden="true">→</span>
+            Campus
+          </button>
+        </div>
       </div>
     </section>
 
     <section id="como-funciona" class="block" aria-labelledby="como-titulo">
       <div class="inner">
         <p class="eyebrow">Cómo funciona</p>
-        <h2 id="como-titulo">Cuatro pasos. Sin app de taxi, sin grupo de WhatsApp eterno.</h2>
+        <h2 id="como-titulo">Cuatro pasos. Sin grupo de WhatsApp eterno.</h2>
         <ol class="pasos">
           <li v-for="paso in pasos" :key="paso.n" class="paso">
-            <span class="paso-n" aria-hidden="true">{{ paso.n }}</span>
-            <div>
-              <h3>{{ paso.titulo }}</h3>
-              <p>{{ paso.texto }}</p>
-            </div>
+            <span class="paso-icon" aria-hidden="true">
+              <IconoRide :nombre="paso.nombre" />
+            </span>
+            <span class="paso-n">{{ paso.n }}</span>
+            <h3>{{ paso.titulo }}</h3>
+            <p>{{ paso.texto }}</p>
           </li>
         </ol>
       </div>
@@ -119,24 +171,20 @@ const rutas = [
 
     <section class="block block--soft" aria-labelledby="roles-titulo">
       <div class="inner">
-        <p class="eyebrow">Dos formas de usarlo</p>
-        <h2 id="roles-titulo">Tú decides el rol del día</h2>
+        <p class="eyebrow">Elige rol</p>
+        <h2 id="roles-titulo">¿Vas al volante o necesitas asiento?</h2>
         <div class="roles">
           <article class="role-card">
+            <span class="paso-icon" aria-hidden="true"><IconoRide nombre="volante" /></span>
             <h3>Conductor</h3>
-            <p>
-              Publicas origen, destino, hora de salida y cupos. El aporte sugerido solo ayuda a
-              gasolina y mantenimiento — no es un negocio de transporte.
-            </p>
-            <RouterLink to="/publicar" class="role-link">Publicar un viaje</RouterLink>
+            <p>Publica hora y cupos. El aporte cubre gasolina, no es un negocio.</p>
+            <RouterLink to="/publicar" class="role-link">Publicar ruta</RouterLink>
           </article>
           <article class="role-card">
+            <span class="paso-icon" aria-hidden="true"><IconoRide nombre="pasajero" /></span>
             <h3>Pasajero</h3>
-            <p>
-              Filtras por zona y hora de clase. Eliges un asiento en un carro que ya iba para el
-              campus. Más barato que un traslado privado, más predecible que el transporte público.
-            </p>
-            <RouterLink to="/viajes" class="role-link">Buscar un asiento</RouterLink>
+            <p>Filtra por zona y hora de clase. Te subes a un carro que ya iba.</p>
+            <RouterLink to="/viajes" class="role-link">Buscar asiento</RouterLink>
           </article>
         </div>
       </div>
@@ -145,9 +193,10 @@ const rutas = [
     <section class="block" aria-labelledby="por-que-titulo">
       <div class="inner">
         <p class="eyebrow">Por qué existe</p>
-        <h2 id="por-que-titulo">El problema no es “llegar”. Es llegar bien.</h2>
+        <h2 id="por-que-titulo">Menos gasto. Menos fila. Más confianza.</h2>
         <div class="beneficios">
           <article v-for="item in beneficios" :key="item.titulo" class="beneficio">
+            <span class="paso-icon" aria-hidden="true"><IconoRide :nombre="item.nombre" /></span>
             <h3>{{ item.titulo }}</h3>
             <p>{{ item.texto }}</p>
           </article>
@@ -157,13 +206,12 @@ const rutas = [
 
     <section class="cierre" aria-labelledby="cierre-titulo">
       <div class="inner cierre-inner">
-        <h2 id="cierre-titulo">El próximo pico de las 7:00 puede ir más liviano</h2>
-        <p>Si ya vas en carro, lleva a alguien de la UJAP. Si no, súbete con quien sí va.</p>
+        <h2 id="cierre-titulo">El pico de las 7:00 puede ir más liviano</h2>
         <div class="hero-ctas">
           <RouterLink :to="ctaPrincipal.to" class="btn btn-primary">{{
             ctaPrincipal.label
           }}</RouterLink>
-          <RouterLink to="/#como-funciona" class="btn btn-ghost">Repasar cómo funciona</RouterLink>
+          <RouterLink to="/viajes" class="btn btn-ghost">Ver viajes</RouterLink>
         </div>
       </div>
     </section>
@@ -177,7 +225,7 @@ const rutas = [
 
 .inner {
   width: 100%;
-  max-width: 68rem;
+  max-width: 72rem;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -189,12 +237,12 @@ const rutas = [
 }
 
 .eyebrow {
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.65rem;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
 }
 
 h1,
@@ -202,55 +250,61 @@ h2 {
   margin: 0;
   color: var(--color-heading);
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   line-height: 1.15;
 }
 
 h1 {
-  font-size: clamp(1.75rem, 4vw, 2.75rem);
-  max-width: 18ch;
+  font-size: clamp(1.7rem, 3.6vw, 2.55rem);
+  max-width: 16ch;
 }
 
 h2 {
-  font-size: clamp(1.35rem, 2.5vw, 1.85rem);
-  max-width: 28ch;
+  font-size: clamp(1.25rem, 2.2vw, 1.7rem);
+  max-width: 24ch;
   margin-bottom: 1.5rem;
 }
 
 h3 {
-  margin: 0 0 0.4rem;
-  font-size: 1.05rem;
+  margin: 0.55rem 0 0.3rem;
+  font-size: 1rem;
   font-weight: 700;
   color: var(--color-heading);
 }
 
-.lead,
-.paso p,
-.beneficio p,
-.role-card p,
-.cierre p {
-  margin: 0;
-  color: var(--color-text);
-  opacity: 0.82;
-  line-height: 1.6;
-}
-
 .hero {
-  padding: 2.5rem 0 3rem;
+  padding: 2rem 0 2.5rem;
   background: var(--ride-green-light);
 }
 
+.hero-grid {
+  display: grid;
+  gap: 2rem;
+  align-items: center;
+}
+
+@media (min-width: 900px) {
+  .hero-grid {
+    grid-template-columns: 1.05fr 0.95fr;
+    gap: 2.5rem;
+    min-height: 28rem;
+  }
+}
+
 .lead {
-  margin-top: 1rem;
-  max-width: 42rem;
-  font-size: 1.05rem;
+  margin: 0.9rem 0 0;
+  max-width: 36rem;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: var(--color-text);
+  opacity: 0.85;
 }
 
 .hero-ctas {
   display: flex;
   flex-wrap: wrap;
   gap: 0.75rem;
-  margin-top: 1.75rem;
+  margin-top: 1.4rem;
 }
 
 .btn {
@@ -258,10 +312,13 @@ h3 {
   align-items: center;
   justify-content: center;
   min-height: 2.75rem;
-  padding: 0.7rem 1.25rem;
+  padding: 0.65rem 1.2rem;
   border-radius: var(--ride-radius);
   font-weight: 700;
   text-decoration: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.95rem;
   transition:
     background var(--ride-transition),
     color var(--ride-transition),
@@ -280,72 +337,148 @@ h3 {
 }
 
 .btn-ghost {
-  background: transparent;
-  color: var(--ride-green);
-  border: 1px solid var(--ride-green);
+  background: var(--color-background);
+  color: var(--ride-green-fg);
+  border: 1px solid var(--ride-green-border);
 }
 
 .btn-ghost:hover {
-  background: var(--color-background);
+  background: var(--color-background-soft);
   opacity: 1;
 }
 
-.trust {
+.btn-full {
+  width: 100%;
+}
+
+.trust-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.15rem;
   margin: 1.25rem 0 0;
-  font-size: 0.875rem;
-  opacity: 0.75;
-  max-width: 36rem;
+  padding: 0;
+  list-style: none;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.trust-row li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trust-row :deep(.icono) {
+  color: var(--ride-green-fg);
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.hero-visual {
+  position: relative;
+}
+
+.buscador {
+  margin-top: -2.25rem;
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.1rem 1.15rem 1.2rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--ride-radius-lg);
+  background: var(--color-background);
+}
+
+.buscador-titulo {
+  margin: 0;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--color-heading);
+}
+
+.buscador label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.buscador input {
+  min-height: 2.5rem;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--ride-radius);
+  background: var(--color-background-soft);
+  color: var(--color-text);
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.buscador input:focus {
+  outline: 2px solid var(--ride-green);
+  outline-offset: 1px;
 }
 
 .band {
-  padding: 1.1rem 0;
+  padding: 1rem 0;
   border-bottom: 1px solid var(--color-border);
+  background: var(--color-background);
 }
 
 .band-row {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 0.7rem;
 }
 
 @media (min-width: 768px) {
   .band-row {
     flex-direction: row;
     align-items: center;
-    gap: 1.25rem;
   }
 }
 
 .band-label {
   margin: 0;
   flex-shrink: 0;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   color: var(--color-text);
-  opacity: 0.6;
+  opacity: 0.55;
 }
 
 .chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  list-style: none;
-  margin: 0;
-  padding: 0;
+  gap: 0.45rem;
 }
 
 .chip {
-  padding: 0.35rem 0.7rem;
+  padding: 0.4rem 0.75rem;
   border: 1px solid var(--ride-green-border);
   border-radius: 999px;
+  background: var(--color-background-soft);
+  color: var(--color-heading);
   font-size: 0.8rem;
   font-weight: 600;
-  background: var(--color-background);
+  cursor: pointer;
+  font-family: inherit;
 }
 
-.chip-arrow {
-  color: var(--ride-green);
-  margin: 0 0.2rem;
+.chip:hover {
+  border-color: var(--ride-green);
+  color: var(--ride-green-fg);
+}
+
+.chip span {
+  color: var(--ride-green-fg);
+  margin: 0 0.15rem;
 }
 
 #como-funciona {
@@ -353,86 +486,97 @@ h3 {
 }
 
 .block {
-  padding: 3rem 0;
+  padding: 2.75rem 0;
 }
 
 .block--soft {
   background: var(--color-background-soft);
 }
 
-.pasos {
+.pasos,
+.beneficios {
   list-style: none;
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
-@media (min-width: 768px) {
-  .pasos {
-    grid-template-columns: 1fr 1fr;
+@media (min-width: 700px) {
+  .pasos,
+  .beneficios {
+    grid-template-columns: repeat(4, 1fr);
   }
 }
 
-.paso {
-  display: flex;
-  gap: 0.9rem;
-  padding: 1.1rem 1.15rem;
+.paso,
+.beneficio,
+.role-card {
+  padding: 1.15rem 1.1rem 1.2rem;
   border: 1px solid var(--color-border);
   border-radius: var(--ride-radius-lg);
   background: var(--color-background);
+}
+
+.paso p,
+.beneficio p,
+.role-card p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--color-text);
+  opacity: 0.8;
+}
+
+.paso-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.4rem;
+  height: 2.4rem;
+  border-radius: 10px;
+  background: var(--ride-green-light);
+  color: var(--ride-green-fg);
 }
 
 .paso-n {
-  font-size: 0.8rem;
+  display: block;
+  margin-top: 0.7rem;
+  font-size: 0.7rem;
   font-weight: 800;
-  letter-spacing: 0.06em;
-  color: var(--ride-green);
-  flex-shrink: 0;
+  letter-spacing: 0.08em;
+  color: var(--ride-green-fg);
 }
 
-.roles,
-.beneficios {
+.roles {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
-@media (min-width: 768px) {
-  .roles,
-  .beneficios {
+@media (min-width: 700px) {
+  .roles {
     grid-template-columns: 1fr 1fr;
   }
-}
-
-.role-card,
-.beneficio {
-  padding: 1.25rem 1.3rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--ride-radius-lg);
-  background: var(--color-background);
 }
 
 .role-link {
   display: inline-block;
-  margin-top: 0.9rem;
+  margin-top: 0.85rem;
   font-weight: 700;
   font-size: 0.9rem;
+  color: var(--ride-green-fg);
 }
 
 .cierre {
-  padding: 3rem 0 4rem;
+  padding: 2.5rem 0 3rem;
   background: var(--ride-green-light);
 }
 
 .cierre-inner {
-  max-width: 40rem;
-}
-
-.cierre h2 {
-  margin-bottom: 0.75rem;
+  max-width: 36rem;
 }
 
 .cierre .hero-ctas {
-  margin-top: 1.5rem;
+  margin-top: 1.15rem;
 }
 </style>

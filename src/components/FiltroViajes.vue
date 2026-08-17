@@ -2,13 +2,17 @@
 import { ref, watch } from 'vue'
 import type { FiltroViajes } from '@/types'
 
+const props = defineProps<{
+  inicial?: FiltroViajes
+}>()
+
 const emit = defineEmits<{
   filtrar: [criterios: FiltroViajes]
 }>()
 
-const origen = ref('')
-const destino = ref('')
-const hora = ref('')
+const origen = ref(props.inicial?.origen ?? '')
+const destino = ref(props.inicial?.destino ?? '')
+const hora = ref(props.inicial?.hora ?? '')
 
 function emitirFiltro() {
   emit('filtrar', { origen: origen.value, destino: destino.value, hora: hora.value })
@@ -21,7 +25,7 @@ function limpiar() {
   emitirFiltro()
 }
 
-watch([origen, destino, hora], emitirFiltro)
+watch([origen, destino, hora], emitirFiltro, { immediate: true })
 </script>
 
 <template>
@@ -49,11 +53,7 @@ watch([origen, destino, hora], emitirFiltro)
 
       <label class="filtro-campo">
         <span>Hora (desde)</span>
-        <input
-          v-model="hora"
-          type="time"
-          aria-label="Filtrar por hora"
-        />
+        <input v-model="hora" type="time" aria-label="Filtrar por hora" />
       </label>
     </div>
 
@@ -125,7 +125,9 @@ watch([origen, destino, hora], emitirFiltro)
   color: var(--ride-green);
   font-weight: 600;
   cursor: pointer;
-  transition: background var(--ride-transition), color var(--ride-transition);
+  transition:
+    background var(--ride-transition),
+    color var(--ride-transition);
 }
 
 .btn-limpiar:hover {

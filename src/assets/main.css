@@ -9,7 +9,7 @@
 a,
 .green {
   text-decoration: none;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   transition: var(--ride-transition);
 }
 

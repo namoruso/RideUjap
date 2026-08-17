@@ -24,7 +24,7 @@ defineProps<{
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
 }
 
 h1 {

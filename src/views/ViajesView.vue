@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useViajesStore } from '@/stores/viajes'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
 import FiltroViajes from '@/components/FiltroViajes.vue'
@@ -10,8 +10,13 @@ import type { FiltroViajes as FiltroType } from '@/types'
 
 const store = useViajesStore()
 const router = useRouter()
+const route = useRoute()
 
-const filtroActivo = ref<FiltroType>({ origen: '', destino: '', hora: '' })
+const filtroActivo = ref<FiltroType>({
+  origen: typeof route.query['origen'] === 'string' ? route.query['origen'] : '',
+  destino: typeof route.query['destino'] === 'string' ? route.query['destino'] : '',
+  hora: typeof route.query['hora'] === 'string' ? route.query['hora'] : '',
+})
 
 const viajesVisibles = computed(() => store.viajesFiltrados(filtroActivo.value))
 
@@ -33,7 +38,7 @@ onMounted(() => store.cargarViajes())
       subtitulo="Filtra por zona y hora de clase. Solo verás rutas de gente de la UJAP."
     />
 
-    <FiltroViajes @filtrar="handleFiltrar" />
+    <FiltroViajes :inicial="filtroActivo" @filtrar="handleFiltrar" />
 
     <section class="seccion-viajes" aria-label="Lista de viajes">
       <div v-if="store.cargando" class="estado-carga" role="status">

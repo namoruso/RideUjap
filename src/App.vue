@@ -11,6 +11,7 @@ const darkMode = ref(false)
 
 function aplicarTema(dark: boolean) {
   document.documentElement.classList.toggle('dark', dark)
+  document.documentElement.style.colorScheme = dark ? 'dark' : 'light'
   localStorage.setItem('ride_dark', dark ? '1' : '0')
 }
 
@@ -242,7 +243,7 @@ function cerrarSesion() {
   gap: 0.5rem;
   font-weight: 800;
   font-size: 1.1rem;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   text-decoration: none;
   flex-shrink: 0;
 }
@@ -280,7 +281,7 @@ function cerrarSesion() {
   opacity: 1;
 }
 .nav-desktop a.router-link-exact-active {
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   font-weight: 700;
   background: var(--ride-green-light);
 }
@@ -360,7 +361,7 @@ function cerrarSesion() {
 .link-auth {
   font-size: 0.875rem;
   font-weight: 600;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   text-decoration: none;
   padding: 0.3rem 0.5rem;
 }
@@ -442,7 +443,7 @@ function cerrarSesion() {
   background: var(--color-background-soft);
 }
 .nav-movil a.router-link-exact-active {
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   font-weight: 700;
 }
 

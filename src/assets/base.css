@@ -40,6 +40,7 @@
   --ride-green-hover: #095c42;
   --ride-green-light: #e8f5ef;
   --ride-green-border: #b2dece;
+  --ride-green-fg: #0b6e4f;
   --ride-radius: 8px;
   --ride-radius-lg: 12px;
   --ride-gap: 0.75rem;
@@ -47,22 +48,19 @@
   --ride-transition: 0.2s ease;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not(.dark-forced-light) {
-    --color-background: var(--vt-c-black);
-    --color-background-soft: var(--vt-c-black-soft);
-    --color-background-mute: var(--vt-c-black-mute);
+/* El tema lo controla la clase en <html>. No mezclar con prefers-color-scheme:
+   si no, el modo claro no gana cuando el sistema está en oscuro. */
 
-    --color-border: var(--vt-c-divider-dark-2);
-    --color-border-hover: var(--vt-c-divider-dark-1);
+html {
+  color-scheme: light;
+}
 
-    --color-heading: var(--vt-c-text-dark-1);
-    --color-text: var(--vt-c-text-dark-2);
-  }
+html.dark {
+  color-scheme: dark;
 }
 
 /* Dark mode manual activado por clase .dark en <html> */
-:root.dark {
+html.dark {
   --color-background: var(--vt-c-black);
   --color-background-soft: var(--vt-c-black-soft);
   --color-background-mute: var(--vt-c-black-mute);
@@ -73,8 +71,9 @@
   --color-heading: var(--vt-c-text-dark-1);
   --color-text: var(--vt-c-text-dark-2);
 
-  /* Ajustes específicos dark para RideUJAP */
-  --ride-green-light: rgba(11, 110, 79, 0.15);
+  --ride-green-light: #16352c;
+  --ride-green-border: #2f6a56;
+  --ride-green-fg: #5ee0a8;
 }
 
 *,
