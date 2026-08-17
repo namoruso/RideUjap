@@ -121,11 +121,11 @@ const beneficios = [
         <div class="hero-visual ride-fade-up ride-delay-2">
           <div class="hero-frame">
             <IlustracionHero />
-            <aside class="live-card" aria-label="Ejemplo de viaje">
-              <p class="live-ruta">San Diego <span>→</span> Campus</p>
-              <p class="live-meta">Hoy · 7:15 a.m. · 2 cupos</p>
-            </aside>
           </div>
+          <aside class="live-card" aria-label="Ejemplo de viaje">
+            <p class="live-ruta">San Diego <span>→</span> Campus</p>
+            <p class="live-meta">Hoy · 7:15 a.m. · 2 cupos</p>
+          </aside>
           <form class="buscador" @submit.prevent="buscarRuta">
             <p class="buscador-titulo">Encuentra un asiento</p>
             <div class="buscador-grid">
@@ -254,7 +254,7 @@ const beneficios = [
 
 .inner {
   width: 100%;
-  max-width: 70rem;
+  max-width: 80rem;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -317,9 +317,9 @@ h3 {
 
 @media (min-width: 960px) {
   .hero-grid {
-    grid-template-columns: minmax(0, 1fr) minmax(20rem, 26rem);
-    gap: 3rem;
-    min-height: 32rem;
+    grid-template-columns: minmax(0, 1.05fr) minmax(22rem, 32rem);
+    gap: 3.5rem;
+    min-height: 0;
     align-items: center;
   }
 }
@@ -418,26 +418,23 @@ h3 {
 }
 
 .hero-visual {
-  position: relative;
+  display: grid;
+  gap: 0.85rem;
 }
 
 .hero-frame {
-  position: relative;
   border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--ride-green-border);
-  background: var(--color-background-soft);
+  background: var(--color-background);
+  padding: 1.25rem 1rem 0.5rem;
 }
 
 .live-card {
-  position: absolute;
-  top: 1rem;
-  left: 1rem;
-  padding: 0.7rem 0.9rem;
+  padding: 0.65rem 0.85rem;
   border-radius: 12px;
   background: var(--color-background);
   border: 1px solid var(--color-border);
-  animation: ride-fade-up 0.7s var(--ride-ease) 0.35s both;
 }
 
 .live-ruta {
@@ -459,24 +456,12 @@ h3 {
 }
 
 .buscador {
-  margin-top: -2.6rem;
-  margin-left: 1rem;
-  margin-right: 1rem;
-  position: relative;
-  z-index: 1;
   display: grid;
   gap: 0.75rem;
   padding: 1.15rem 1.2rem 1.25rem;
   border: 1px solid var(--color-border);
   border-radius: 1rem;
   background: var(--color-background);
-}
-
-@media (min-width: 960px) {
-  .buscador {
-    margin-left: 1.25rem;
-    margin-right: 1.25rem;
-  }
 }
 
 .buscador-titulo {
