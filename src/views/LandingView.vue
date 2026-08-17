@@ -29,6 +29,12 @@ function buscarRuta() {
   })
 }
 
+function buscarRutaDesde(origen: string) {
+  busqueda.origen = origen
+  busqueda.destino = 'Campus UJAP'
+  buscarRuta()
+}
+
 const pasos = [
   {
     n: '1',
@@ -138,11 +144,7 @@ const beneficios = [
             :key="ruta"
             type="button"
             class="chip"
-            @click="
-              busqueda.origen = ruta
-              busqueda.destino = 'Campus UJAP'
-              buscarRuta()
-            "
+            @click="buscarRutaDesde(ruta)"
           >
             {{ ruta }}
             <span aria-hidden="true">→</span>
