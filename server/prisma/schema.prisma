@@ -1,0 +1,56 @@
+// RideUJAP — Prisma schema
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id             Int      @id @default(autoincrement())
+  nombre         String
+  correo         String   @unique
+  telefono       String
+  esConductor    Boolean  @default(false)
+  contrasenaHash String
+  creadoEn       DateTime @default(now())
+
+  viajes  Viaje[]         @relation("Conductor")
+  uniones PasajeroViaje[]
+}
+
+model Viaje {
+  id                  Int      @id @default(autoincrement())
+  origen              String
+  destino             String
+  puntoEncuentro      String?
+  fecha               String
+  hora                String
+  cuposTotal          Int
+  cuposDisponibles    Int
+  descripcionVehiculo String
+  estado              String   @default("disponible")
+  creadoEn            DateTime @default(now())
+
+  idConductor Int
+  conductor   Usuario @relation("Conductor", fields: [idConductor], references: [id])
+
+  pasajeros PasajeroViaje[]
+}
+
+model PasajeroViaje {
+  id       Int      @id @default(autoincrement())
+  unidoEn  DateTime @default(now())
+
+  idUsuario Int
+  usuario   Usuario @relation(fields: [idUsuario], references: [id])
+
+  idViaje Int
+  viaje   Viaje @relation(fields: [idViaje], references: [id])
+
+  @@unique([idUsuario, idViaje])
+}

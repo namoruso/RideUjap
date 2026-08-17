@@ -1,4 +1,4 @@
-// RideUJAP — core data models for the campus ride-sharing app
+// RideUJAP — modelos de datos del frontend
 
 export interface Usuario {
   id: number
@@ -8,24 +8,52 @@ export interface Usuario {
   esConductor: boolean
 }
 
-export interface Vehiculo {
-  id: number
-  placa: string
-  marca: string
-  modelo: string
-  color: string
-  capacidad: number
-  idConductor: number
-}
+export type UsuarioPublico = Usuario
 
-/** Published ride (matches the lab example + links to driver/vehicle) */
 export interface Viaje {
   id: number
   origen: string
   destino: string
+  puntoEncuentro?: string | null
+  fecha: string
   hora: string
+  cuposTotal: number
   cuposDisponibles: number
   idConductor: number
-  idVehiculo: number
-  estado: string // "disponible" | "en curso" | "finalizado"
+  conductorNombre?: string
+  conductorTelefono?: string
+  descripcionVehiculo: string
+  estado: string
+  creadoEn?: string
+}
+
+export interface FiltroViajes {
+  origen: string
+  destino: string
+  hora: string
+}
+
+export type NuevoViaje = Pick<
+  Viaje,
+  'origen' | 'destino' | 'puntoEncuentro' | 'fecha' | 'hora' | 'cuposDisponibles' | 'descripcionVehiculo'
+>
+
+// ── Auth types ────────────────────────────────────────────────────────────────
+
+export interface DatosLogin {
+  correo: string
+  contrasena: string
+}
+
+export interface DatosRegistro {
+  nombre: string
+  correo: string
+  telefono: string
+  esConductor: boolean
+  contrasena: string
+}
+
+export interface RespuestaAuth {
+  usuario: UsuarioPublico
+  token: string
 }

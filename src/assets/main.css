@@ -1,17 +1,15 @@
 @import './base.css';
 
 #app {
-  max-width: 960px;
-  margin: 0 auto;
-  padding: 1.25rem;
+  width: 100%;
   font-weight: normal;
 }
 
 a,
 .green {
   text-decoration: none;
-  color: #0b6e4f;
-  transition: 0.2s;
+  color: var(--ride-green);
+  transition: var(--ride-transition);
 }
 
 @media (hover: hover) {
@@ -20,8 +18,22 @@ a,
   }
 }
 
-@media (min-width: 1024px) {
-  #app {
-    padding: 2rem;
+/* Contenedor interior de las vistas — controla el padding horizontal */
+.page-content {
+  width: 100%;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 1.25rem;
+}
+
+@media (min-width: 768px) {
+  .page-content {
+    padding: 2rem 2rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .page-content {
+    padding: 2rem 3rem;
   }
 }

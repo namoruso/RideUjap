@@ -1,45 +1,41 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useViajesStore } from '@/stores/viajes'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
-import TarjetaUsuario from '@/components/TarjetaUsuario.vue'
 import TarjetaViaje from '@/components/TarjetaViaje.vue'
-import { conductorEjemplo, viajesEjemplo } from '@/data/ejemplos'
 
-const mensaje = ref('')
+const store = useViajesStore()
+const router = useRouter()
+
+const viajesRecientes = computed(() => store.viajes.slice(0, 3))
 
 onMounted(() => {
-  console.log('El componente ya está en pantalla')
-  // Aquí es típico pedir datos a una API (próxima unidad)
+  store.cargarViajes()
 })
 
 function handleUnirse(id: number) {
-  mensaje.value = `Te uniste al viaje #${id}`
-  console.log('unirse → viaje id:', id)
-}
-
-function handleContactar(id: number) {
-  mensaje.value = `Contactando al usuario #${id}`
-  console.log('contactar → usuario id:', id)
+  router.push(`/viajes/${id}`)
 }
 </script>
 
 <template>
-  <main class="home">
+  <main class="home-view page-content">
     <EncabezadoRide
       titulo="Viajes disponibles"
       subtitulo="Comparte trayectos entre el campus UJAP y la ciudad"
     />
 
-    <section class="seccion" aria-labelledby="conductor-titulo">
-      <h2 id="conductor-titulo">Conductor destacado</h2>
-      <TarjetaUsuario :usuario="conductorEjemplo" @contactar="handleContactar" />
-    </section>
 
     <section class="seccion" aria-labelledby="viajes-titulo">
-      <h2 id="viajes-titulo">Lista de viajes</h2>
+      <div class="seccion-cabecera">
+        <h2 id="viajes-titulo">Viajes recientes</h2>
+        <RouterLink to="/viajes" class="enlace-ver-todos">Ver todos →</RouterLink>
+      </div>
+
       <div class="lista-viajes">
         <TarjetaViaje
-          v-for="viaje in viajesEjemplo"
+          v-for="viaje in viajesRecientes"
           :key="viaje.id"
           :viaje="viaje"
           @unirse="handleUnirse"
@@ -47,14 +43,17 @@ function handleContactar(id: number) {
       </div>
     </section>
 
-    <p v-if="mensaje" class="mensaje" role="status">{{ mensaje }}</p>
+    <div class="ctas">
+      <RouterLink to="/viajes" class="cta cta--secundario">Explorar viajes</RouterLink>
+      <RouterLink to="/publicar" class="cta cta--principal">+ Publicar viaje</RouterLink>
+    </div>
   </main>
 </template>
 
 <style scoped>
 .home {
   width: 100%;
-  max-width: 40rem;
+  max-width: 48rem;
 }
 
 .seccion {
@@ -66,17 +65,73 @@ function handleContactar(id: number) {
   font-size: 1.1rem;
 }
 
+.seccion-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.seccion-cabecera h2 {
+  margin: 0;
+}
+
+.enlace-ver-todos {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ride-green);
+}
+
 .lista-viajes {
   display: grid;
-  gap: 0.75rem;
+  gap: var(--ride-gap);
+}
+
+.ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--ride-gap);
+  margin-top: 2rem;
+}
+
+.cta {
+  flex: 1 1 auto;
+  padding: 0.7rem 1.25rem;
+  border-radius: var(--ride-radius);
+  font-weight: 700;
+  text-align: center;
+  text-decoration: none;
+  transition: background var(--ride-transition), color var(--ride-transition);
+}
+
+.cta--principal {
+  background: var(--ride-green);
+  color: #fff;
+  border: none;
+}
+
+.cta--principal:hover {
+  background: var(--ride-green-hover);
+  opacity: 1;
+}
+
+.cta--secundario {
+  background: transparent;
+  color: var(--ride-green);
+  border: 1px solid var(--ride-green);
+}
+
+.cta--secundario:hover {
+  background: var(--ride-green-light);
+  opacity: 1;
 }
 
 .mensaje {
   margin-top: 1.25rem;
   padding: 0.75rem 1rem;
-  border-radius: 6px;
-  background: #e8f5ef;
-  color: #0b6e4f;
+  border-radius: var(--ride-radius);
+  background: var(--ride-green-light);
+  color: var(--ride-green);
   font-weight: 600;
 }
 </style>
