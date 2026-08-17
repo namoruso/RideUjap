@@ -224,7 +224,8 @@ function cerrarSesion() {
   gap: 0.75rem;
   padding: 0.7rem 1rem;
   border-bottom: 1px solid var(--color-border);
-  background: var(--color-background);
+  background: color-mix(in srgb, var(--color-background) 86%, transparent);
+  backdrop-filter: blur(14px);
   position: sticky;
   top: 0;
   z-index: 100;
