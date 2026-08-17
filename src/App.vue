@@ -1,10 +1,20 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { RouterLink, RouterView, useRouter } from 'vue-router'
+import { computed, ref, onMounted } from 'vue'
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
 const router = useRouter()
+const route = useRoute()
+
+const esLanding = computed(() => route.name === 'landing')
+const esInicio = computed(() => esLanding.value && route.hash !== '#como-funciona')
+const esComoFunciona = computed(() => esLanding.value && route.hash === '#como-funciona')
+const esViajes = computed(() => route.path.startsWith('/viajes'))
+const esPanel = computed(() => route.name === 'inicio')
+const esPublicar = computed(() => route.name === 'publicar-viaje')
+const esMisViajes = computed(() => route.name === 'mis-viajes')
+const esAbout = computed(() => route.name === 'about')
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
 const darkMode = ref(false)
@@ -22,7 +32,6 @@ function toggleDark() {
 
 onMounted(() => {
   const guardado = localStorage.getItem('ride_dark')
-  // Si hay preferencia guardada, usarla; de lo contrario respetar el sistema
   if (guardado !== null) {
     darkMode.value = guardado === '1'
   } else {
@@ -31,7 +40,6 @@ onMounted(() => {
   aplicarTema(darkMode.value)
 })
 
-// ── Menú móvil ────────────────────────────────────────────────────────────────
 const menuAbierto = ref(false)
 
 function cerrarMenu() {
@@ -48,22 +56,29 @@ function cerrarSesion() {
 <template>
   <div class="app-shell">
     <header class="topbar">
-      <!-- Logo / Brand -->
-      <RouterLink class="brand" to="/" @click="cerrarMenu">
-        <img src="/Logo-UJAP2.jpg" alt="Logo UJAP" class="brand-logo" />
-        <span>RideUJAP</span>
+      <RouterLink class="brand" to="/" aria-label="RideUJAP, ir al inicio" @click="cerrarMenu">
+        <img src="/Logo-UJAP2.jpg" alt="" class="brand-logo" />
+        <span class="brand-copy">
+          <span class="brand-name">RideUJAP</span>
+          <span class="brand-tag">Inicio · carpooling UJAP</span>
+        </span>
       </RouterLink>
 
-      <!-- Nav desktop -->
       <nav class="nav-desktop" aria-label="Navegación principal">
-        <RouterLink :to="{ path: '/', hash: '#como-funciona' }">Cómo funciona</RouterLink>
-        <RouterLink to="/viajes">Viajes</RouterLink>
+        <RouterLink to="/" :class="{ 'is-active': esInicio }">Inicio</RouterLink>
+        <RouterLink
+          :to="{ path: '/', hash: '#como-funciona' }"
+          :class="{ 'is-active': esComoFunciona }"
+        >
+          Cómo funciona
+        </RouterLink>
+        <RouterLink to="/viajes" :class="{ 'is-active': esViajes }">Viajes</RouterLink>
         <template v-if="auth.estaAutenticado">
-          <RouterLink to="/inicio">Panel</RouterLink>
-          <RouterLink to="/publicar">Publicar</RouterLink>
-          <RouterLink to="/mis-viajes">Mis viajes</RouterLink>
+          <RouterLink to="/inicio" :class="{ 'is-active': esPanel }">Mi panel</RouterLink>
+          <RouterLink to="/publicar" :class="{ 'is-active': esPublicar }">Publicar</RouterLink>
+          <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }">Mis viajes</RouterLink>
         </template>
-        <RouterLink to="/about">Acerca de</RouterLink>
+        <RouterLink to="/about" :class="{ 'is-active': esAbout }">Acerca de</RouterLink>
       </nav>
 
       <!-- Controles derechos -->
@@ -171,16 +186,27 @@ function cerrarSesion() {
 
     <!-- Menú móvil desplegable -->
     <nav v-if="menuAbierto" class="nav-movil" aria-label="Menú móvil">
-      <RouterLink :to="{ path: '/', hash: '#como-funciona' }" @click="cerrarMenu"
-        >Cómo funciona</RouterLink
+      <RouterLink to="/" :class="{ 'is-active': esInicio }" @click="cerrarMenu">Inicio</RouterLink>
+      <RouterLink
+        :to="{ path: '/', hash: '#como-funciona' }"
+        :class="{ 'is-active': esComoFunciona }"
+        @click="cerrarMenu"
       >
-      <RouterLink to="/viajes" @click="cerrarMenu">Viajes</RouterLink>
+        Cómo funciona
+      </RouterLink>
+      <RouterLink to="/viajes" :class="{ 'is-active': esViajes }" @click="cerrarMenu">Viajes</RouterLink>
       <template v-if="auth.estaAutenticado">
-        <RouterLink to="/inicio" @click="cerrarMenu">Panel</RouterLink>
-        <RouterLink to="/publicar" @click="cerrarMenu">Publicar viaje</RouterLink>
-        <RouterLink to="/mis-viajes" @click="cerrarMenu">Mis viajes</RouterLink>
+        <RouterLink to="/inicio" :class="{ 'is-active': esPanel }" @click="cerrarMenu">
+          Mi panel
+        </RouterLink>
+        <RouterLink to="/publicar" :class="{ 'is-active': esPublicar }" @click="cerrarMenu">
+          Publicar viaje
+        </RouterLink>
+        <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }" @click="cerrarMenu">
+          Mis viajes
+        </RouterLink>
       </template>
-      <RouterLink to="/about" @click="cerrarMenu">Acerca de</RouterLink>
+      <RouterLink to="/about" :class="{ 'is-active': esAbout }" @click="cerrarMenu">Acerca de</RouterLink>
 
       <div class="nav-movil-footer">
         <template v-if="auth.estaAutenticado">
@@ -241,17 +267,43 @@ function cerrarSesion() {
 .brand {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-weight: 800;
-  font-size: 1.1rem;
+  gap: 0.55rem;
   color: var(--ride-green-fg);
   text-decoration: none;
   flex-shrink: 0;
+  min-width: 0;
+}
+.brand:hover {
+  opacity: 1;
 }
 .brand-logo {
-  height: 28px;
+  height: 32px;
   width: auto;
-  border-radius: 4px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+.brand-copy {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.15;
+  min-width: 0;
+}
+.brand-name {
+  font-weight: 800;
+  font-size: 1.05rem;
+  letter-spacing: -0.02em;
+}
+.brand-tag {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--color-text);
+  opacity: 0.65;
+}
+@media (max-width: 400px) {
+  .brand-tag {
+    display: none;
+  }
 }
 
 /* Nav desktop */
@@ -281,7 +333,7 @@ function cerrarSesion() {
   background: var(--color-background-soft);
   opacity: 1;
 }
-.nav-desktop a.router-link-exact-active {
+.nav-desktop a.is-active {
   color: var(--ride-green-fg);
   font-weight: 700;
   background: var(--ride-green-light);
@@ -443,7 +495,7 @@ function cerrarSesion() {
 .nav-movil a:hover {
   background: var(--color-background-soft);
 }
-.nav-movil a.router-link-exact-active {
+.nav-movil a.is-active {
   color: var(--ride-green-fg);
   font-weight: 700;
 }
