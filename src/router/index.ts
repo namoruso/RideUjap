@@ -1,14 +1,26 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import LandingView from '../views/LandingView.vue'
 import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to) {
+    if (to.hash) {
+      return { el: to.hash, behavior: 'smooth' }
+    }
+    return { top: 0 }
+  },
   routes: [
     // ── Públicas ───────────────────────────────────────────────────────────
     {
       path: '/',
-      name: 'home',
+      name: 'landing',
+      component: LandingView,
+    },
+    {
+      path: '/inicio',
+      name: 'inicio',
       component: HomeView,
     },
     {
@@ -32,7 +44,7 @@ const router = createRouter({
       path: '/login',
       name: 'login',
       component: () => import('../views/LoginView.vue'),
-      meta: { soloInvitado: true }, // redirige a / si ya está logueado
+      meta: { soloInvitado: true },
     },
     {
       path: '/registro',
@@ -74,7 +86,7 @@ router.beforeEach((to) => {
 
   // Si la ruta es solo para invitados y ya está logueado → redirige a inicio
   if (to.meta['soloInvitado'] && auth.estaAutenticado) {
-    return { name: 'home' }
+    return { name: 'inicio' }
   }
 })
 

@@ -134,7 +134,7 @@ const estadoClass: Record<string, string> = {
 }
 
 .flecha {
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   flex-shrink: 0;
   display: flex;
   align-items: center;
@@ -151,10 +151,23 @@ const estadoClass: Record<string, string> = {
   white-space: nowrap;
 }
 
-.badge--disponible { background: #dcfce7; color: #166534; }
-.badge--lleno { background: #f3f4f6; color: #374151; }
-.badge--en-curso { background: #fef9c3; color: #854d0e; }
-.badge--finalizado { background: #fee2e2; color: #991b1b; }
+.badge--disponible {
+  background: var(--ride-green-light);
+  color: var(--ride-green-fg);
+}
+.badge--lleno {
+  background: var(--color-background-mute);
+  color: var(--color-text);
+}
+.badge--en-curso {
+  background: var(--ride-green-light);
+  color: var(--ride-green-fg);
+}
+.badge--finalizado {
+  background: var(--color-background-mute);
+  color: var(--color-text);
+  opacity: 0.8;
+}
 
 /* Meta */
 .tarjeta-meta {
@@ -194,7 +207,7 @@ const estadoClass: Record<string, string> = {
   height: 1.75rem;
   border-radius: 50%;
   background: var(--ride-green-light);
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   font-weight: 800;
   font-size: 0.8rem;
   display: flex;
@@ -210,7 +223,7 @@ const estadoClass: Record<string, string> = {
   border: 1.5px solid var(--ride-green);
   border-radius: 8px;
   background: transparent;
-  color: var(--ride-green);
+  color: var(--ride-green-fg);
   font-weight: 700;
   font-size: 0.875rem;
   cursor: pointer;

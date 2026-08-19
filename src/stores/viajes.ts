@@ -1,6 +1,7 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
+import { viajesEjemplo } from '@/data/ejemplos'
 import type { Viaje, FiltroViajes, NuevoViaje } from '@/types'
 
 const SS_KEY = 'ride_mis_uniones'
@@ -9,6 +10,8 @@ export const useViajesStore = defineStore('viajes', () => {
   const viajes = ref<Viaje[]>([])
   const cargando = ref(false)
   const error = ref<string | null>(null)
+
+  const usandoDemo = ref(false)
 
   const misUniones = ref<number[]>(
     JSON.parse(sessionStorage.getItem(SS_KEY) ?? '[]') as number[],
@@ -27,9 +30,12 @@ export const useViajesStore = defineStore('viajes', () => {
       const res = await fetch(`${API_URL}/viajes`)
       if (!res.ok) throw new Error('Error al obtener los viajes')
       viajes.value = await res.json()
+      usandoDemo.value = false
     } catch (e: unknown) {
-      error.value = 'No se pudieron cargar los viajes. Verifica que el backend esté corriendo.'
-      console.error(e)
+      console.warn('API de viajes no disponible, usando rutas de ejemplo.', e)
+      viajes.value = viajesEjemplo.map((v) => ({ ...v }))
+      usandoDemo.value = true
+      error.value = null
     } finally {
       cargando.value = false
     }
@@ -174,7 +180,7 @@ export const useViajesStore = defineStore('viajes', () => {
   const yaUnido = computed(() => (id: number) => misUniones.value.includes(id))
 
   return {
-    viajes, cargando, error, misUniones,
+    viajes, cargando, error, misUniones, usandoDemo,
     cargarViajes, publicarViaje, unirseAViaje, abandonarViaje, limpiarUniones,
     eliminarViaje, editarHoraViaje, obtenerPasajeros,
     viajesFiltrados, viajesDelUsuario, getViajeById, yaUnido,

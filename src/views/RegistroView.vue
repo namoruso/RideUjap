@@ -89,7 +89,7 @@ async function handleSubmit() {
     contrasena: form.contrasena,
   })
 
-  if (ok) router.push('/')
+  if (ok) router.push('/inicio')
 }
 </script>
 
@@ -102,7 +102,7 @@ async function handleSubmit() {
           <span>RideUJAP</span>
         </div>
         <h1>Crear cuenta</h1>
-        <p class="subtitulo">Únete a la comunidad de viajes compartidos UJAP</p>
+        <p class="subtitulo">Solo correo institucional. Así la red se queda entre gente de la UJAP.</p>
       </div>
 
       <form class="auth-form" novalidate @submit.prevent="handleSubmit">
