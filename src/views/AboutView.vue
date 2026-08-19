@@ -8,7 +8,9 @@
       <p class="marca">RideUJAP</p>
       <h1>Acerca del proyecto</h1>
       <p class="subtitulo">
-        Plataforma de viajes compartidos para la comunidad universitaria UJAP
+        La historia del producto está en la
+        <RouterLink to="/">página de inicio</RouterLink>. Aquí queda el contexto académico y el
+        stack.
       </p>
     </header>
 
@@ -16,9 +18,9 @@
       <section class="card" aria-labelledby="que-es">
         <h2 id="que-es">¿Qué es RideUJAP?</h2>
         <p>
-          RideUJAP es una plataforma tipo Waze/BlaBlaCar pensada para los estudiantes y docentes
-          de la Universidad José Antonio Páez. Permite publicar viajes compartidos hacia el campus
-          en San Diego, Carabobo, y unirse a ellos según origen, destino, hora y cupos disponibles.
+          RideUJAP es una plataforma tipo Waze/BlaBlaCar pensada para los estudiantes y docentes de
+          la Universidad José Antonio Páez. Permite publicar viajes compartidos hacia el campus en
+          San Diego, Carabobo, y unirse a ellos según origen, destino, hora y cupos disponibles.
         </p>
       </section>
 
@@ -38,7 +40,10 @@
           <li><strong>Enrutamiento:</strong> Vue Router</li>
           <li><strong>Estilos:</strong> CSS puro — Grid + Flexbox, mobile-first + Dark Mode</li>
           <li><strong>Backend:</strong> Node.js + Express + TypeScript</li>
-          <li><strong>Base de datos:</strong> SQLite (persistencia real en archivo <code>rideujap.db</code>)</li>
+          <li>
+            <strong>Base de datos:</strong> SQLite (persistencia real en archivo
+            <code>rideujap.db</code>)
+          </li>
           <li><strong>ORM:</strong> Prisma — modelos Usuario, Viaje, PasajeroViaje</li>
           <li><strong>Autenticación:</strong> JWT firmados con <code>jsonwebtoken</code></li>
           <li><strong>Seguridad:</strong> Contraseñas hasheadas con <code>bcryptjs</code></li>

@@ -11,9 +11,7 @@ const store = useViajesStore()
 const auth = useAuthStore()
 const router = useRouter()
 
-const misViajes = computed(() =>
-  auth.usuario ? store.viajesDelUsuario(auth.usuario.id) : [],
-)
+const misViajes = computed(() => (auth.usuario ? store.viajesDelUsuario(auth.usuario.id) : []))
 
 // En mis viajes el botón "Ver detalle" navega al detalle — no "Unirme"
 function handleVerDetalle(id: number) {
@@ -43,7 +41,11 @@ onMounted(async () => {
         />
       </div>
 
-      <EstadoVacio v-else mensaje="Aún no has publicado ningún viaje" />
+      <EstadoVacio
+        v-else
+        titulo="Todavía no publicas una ruta"
+        mensaje="Cuando vayas en carro al campus, publica origen, hora y cupos. Alguien de la UJAP puede ocupar el asiento vacío."
+      />
 
       <div class="acciones">
         <RouterLink to="/publicar" class="btn-publicar">+ Publicar nuevo viaje</RouterLink>

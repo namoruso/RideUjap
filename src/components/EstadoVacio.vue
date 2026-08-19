@@ -1,13 +1,17 @@
 <script setup lang="ts">
 defineProps<{
+  titulo?: string
   mensaje?: string
 }>()
 </script>
 
 <template>
   <div class="estado-vacio" role="status" aria-live="polite">
-    <span class="icono" aria-hidden="true">🚗</span>
-    <p>{{ mensaje ?? 'No hay viajes disponibles' }}</p>
+    <p v-if="titulo" class="titulo">{{ titulo }}</p>
+    <p>{{ mensaje ?? 'Aún no hay rutas a esta hora. Publica la tuya o prueba otro filtro.' }}</p>
+    <div v-if="$slots.accion" class="accion">
+      <slot name="accion" />
+    </div>
   </div>
 </template>
 
@@ -16,14 +20,28 @@ defineProps<{
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 0.75rem;
-  padding: 3rem 1rem;
+  gap: 0.5rem;
+  padding: 2.5rem 1.25rem;
   text-align: center;
   color: var(--color-text);
-  opacity: 0.65;
+  border: 1px dashed var(--color-border);
+  border-radius: var(--ride-radius-lg);
+  background: var(--color-background-soft);
 }
 
-.icono {
-  font-size: 2.5rem;
+.titulo {
+  margin: 0;
+  font-weight: 700;
+  color: var(--color-heading);
+}
+
+.estado-vacio p {
+  margin: 0;
+  max-width: 28rem;
+  opacity: 0.8;
+}
+
+.accion {
+  margin-top: 0.75rem;
 }
 </style>

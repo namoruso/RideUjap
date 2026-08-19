@@ -1,0 +1,78 @@
+/* Motion — entradas, hover y scroll. Paleta intacta. */
+
+:root {
+  --ride-ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --ride-duration: 0.55s;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.ride-fade-up {
+  animation: ride-fade-up var(--ride-duration) var(--ride-ease) both;
+}
+
+.ride-delay-1 {
+  animation-delay: 0.07s;
+}
+.ride-delay-2 {
+  animation-delay: 0.14s;
+}
+.ride-delay-3 {
+  animation-delay: 0.21s;
+}
+.ride-delay-4 {
+  animation-delay: 0.28s;
+}
+
+@keyframes ride-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ride-dash {
+  to {
+    stroke-dashoffset: -180;
+  }
+}
+
+@keyframes ride-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+@keyframes ride-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .ride-fade-up,
+  .ride-delay-1,
+  .ride-delay-2,
+  .ride-delay-3,
+  .ride-delay-4 {
+    animation: none;
+  }
+}

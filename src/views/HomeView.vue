@@ -4,6 +4,7 @@ import { useRouter } from 'vue-router'
 import { useViajesStore } from '@/stores/viajes'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
 import TarjetaViaje from '@/components/TarjetaViaje.vue'
+import EstadoVacio from '@/components/EstadoVacio.vue'
 
 const store = useViajesStore()
 const router = useRouter()
@@ -22,18 +23,29 @@ function handleUnirse(id: number) {
 <template>
   <main class="home-view page-content">
     <EncabezadoRide
-      titulo="Viajes disponibles"
-      subtitulo="Comparte trayectos entre el campus UJAP y la ciudad"
+      titulo="Tu panel"
+      subtitulo="Aquí ves lo que se mueve hoy. Publica un asiento o súbete a una ruta que ya iba al campus."
     />
-
 
     <section class="seccion" aria-labelledby="viajes-titulo">
       <div class="seccion-cabecera">
-        <h2 id="viajes-titulo">Viajes recientes</h2>
-        <RouterLink to="/viajes" class="enlace-ver-todos">Ver todos →</RouterLink>
+        <h2 id="viajes-titulo">Salidas próximas</h2>
+        <RouterLink to="/viajes" class="enlace-ver-todos">Ver todas las rutas →</RouterLink>
       </div>
 
-      <div class="lista-viajes">
+      <div v-if="store.cargando" class="estado-carga" role="status">Cargando salidas…</div>
+
+      <EstadoVacio
+        v-else-if="viajesRecientes.length === 0"
+        titulo="Todavía no hay salidas cargadas"
+        mensaje="Cuando el listado esté disponible, aparecen aquí las próximas rutas al campus. Mientras tanto puedes explorar o publicar."
+      >
+        <template #accion>
+          <RouterLink to="/viajes" class="enlace-ver-todos">Ir a viajes</RouterLink>
+        </template>
+      </EstadoVacio>
+
+      <div v-else class="lista-viajes">
         <TarjetaViaje
           v-for="viaje in viajesRecientes"
           :key="viaje.id"
@@ -44,8 +56,8 @@ function handleUnirse(id: number) {
     </section>
 
     <div class="ctas">
-      <RouterLink to="/viajes" class="cta cta--secundario">Explorar viajes</RouterLink>
-      <RouterLink to="/publicar" class="cta cta--principal">+ Publicar viaje</RouterLink>
+      <RouterLink to="/viajes" class="cta cta--secundario">Buscar un asiento</RouterLink>
+      <RouterLink to="/publicar" class="cta cta--principal">Publicar mi ruta</RouterLink>
     </div>
   </main>
 </template>
@@ -87,6 +99,12 @@ function handleUnirse(id: number) {
   gap: var(--ride-gap);
 }
 
+.estado-carga {
+  padding: 1.5rem;
+  text-align: center;
+  opacity: 0.7;
+}
+
 .ctas {
   display: flex;
   flex-wrap: wrap;
@@ -101,7 +119,9 @@ function handleUnirse(id: number) {
   font-weight: 700;
   text-align: center;
   text-decoration: none;
-  transition: background var(--ride-transition), color var(--ride-transition);
+  transition:
+    background var(--ride-transition),
+    color var(--ride-transition);
 }
 
 .cta--principal {
