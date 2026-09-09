@@ -18,7 +18,7 @@ La app tiene **dos capas**: marketing (entender) y producto (hacer). Nadie aterr
 Invitado                         Sesión iniciada
 ────────                         ──────────────
 /  Landing                       /  Landing (sigue accesible)
-   ├ Cómo funciona               /inicio  Panel
+   ├ sección Cómo funciona       /inicio  Panel
    ├ Beneficios                  /viajes  Buscar
    └ CTA registro / ver viajes   /viajes/:id
 /viajes  Explorar (solo lectura) /publicar

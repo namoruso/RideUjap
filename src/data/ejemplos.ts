@@ -14,8 +14,8 @@ export const usuariosEjemplo: Usuario[] = [conductorEjemplo]
 export const viajesEjemplo: Viaje[] = [
   {
     id: 101,
-    origen: 'San Diego',
-    destino: 'Campus UJAP',
+    origen: 'San Diego, Carabobo, Venezuela',
+    destino: 'Universidad José Antonio Páez (Campus UJAP)',
     puntoEncuentro: 'Plaza Bolívar',
     fecha: '2026-08-18',
     hora: '07:15',
