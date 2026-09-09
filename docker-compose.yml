@@ -1,0 +1,43 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: rideujap-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: rideujap
+      POSTGRES_PASSWORD: rideujap
+      POSTGRES_DB: rideujap
+    ports:
+      # 5433 en el host para no chocar con un Postgres local en 5432
+      - '5433:5432'
+    volumes:
+      - rideujap_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U rideujap -d rideujap']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: rideujap-api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - '3001:3001'
+    env_file:
+      - ./server/.env
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://rideujap:rideujap@db:5432/rideujap?schema=public
+      # JWT_SECRET y CLERK_* vienen de server/.env si existen
+    volumes:
+      # Hot-ish mount for local iteration (optional; rebuild for deps)
+      - ./server/src:/app/src
+
+volumes:
+  rideujap_pg:

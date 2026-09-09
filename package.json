@@ -13,9 +13,17 @@
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "format": "prettier --write --experimental-cli src/",
+    "docker:up": "docker compose up -d --build",
+    "docker:db": "docker compose up -d db",
+    "docker:down": "docker compose down",
+    "server:dev": "pnpm --dir server run dev",
+    "server:setup": "pnpm --dir server run db:setup"
   },
   "dependencies": {
+    "@clerk/localizations": "^4.16.0",
+    "@clerk/vue": "^2.5.0",
+    "@googlemaps/js-api-loader": "^2.1.1",
     "lucide-vue-next": "^1.0.0",
     "pinia": "^4.0.2",
     "vue": "^3.5.40",
@@ -23,6 +31,7 @@
   },
   "devDependencies": {
     "@tsconfig/node24": "^24.0.4",
+    "@types/google.maps": "^3.66.2",
     "@types/jsdom": "^28.0.3",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",

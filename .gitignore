@@ -37,3 +37,19 @@ __screenshots__/
 
 # Vite
 *.timestamp-*-*.mjs
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+server/.env
+server/.env.*
+!server/.env.example
+
+# Local DBs
+*.db
+*.db-journal
+server/prisma/rideujap.db
+
+# Docker
+.docker-data/
