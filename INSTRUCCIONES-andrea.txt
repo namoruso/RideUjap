@@ -1,0 +1,49 @@
+RideUJAP — cómo subir estos cambios con TU commit (Andrea)
+==========================================================
+
+IMPORTANTE
+----------
+- Aplica este parche DESPUÉS de que Valentina haya hecho push de su commit
+  en feat/fase-1-frontend. Si aplicas antes, puede fallar o quedar a medias.
+- NO subas archivos .env con secretos reales.
+- Usa la rama docs/para-andrea (no la vieja docs/para-val).
+
+1. Copia estos dos archivos a la carpeta del repo (donde está package.json):
+   - RideUJAP-para-andrea.diff
+   - INSTRUCCIONES-andrea.txt
+
+2. En la terminal:
+
+   git checkout feat/fase-1-frontend
+   git pull
+   git apply RideUJAP-para-andrea.diff
+   git status
+
+3. Revisa que NO estén el .diff ni este .txt en el commit. Si salen:
+
+   git restore --staged RideUJAP-para-andrea.diff INSTRUCCIONES-andrea.txt
+
+4. Agrega los archivos del parche y haz commit con TU usuario de git:
+
+   git add -u
+   git add src/components/MapaTrayecto.vue src/components/ModalDialog.vue \
+     src/utils/lugares.ts
+   git status
+   git commit -m "feat(viajes): filtros por zona, mapa, mis viajes y modales"
+
+5. Sube tu rama:
+
+   git push -u origin feat/fase-1-frontend
+
+6. Borra estos archivos locales cuando ya hayas commiteado:
+
+   rm RideUJAP-para-andrea.diff INSTRUCCIONES-andrea.txt
+
+Si git apply falla, prueba:
+
+   git apply --3way RideUJAP-para-andrea.diff
+
+Qué incluye este parche
+-----------------------
+Listado de viajes, filtros por zona, publicar con mapa, Mis viajes,
+modales con diseño de la app, y copy sin cobros/aportes.

@@ -1,0 +1,4417 @@
+diff --git a/docs/UX-FLUJO.md b/docs/UX-FLUJO.md
+index 7f96e2a..a7562c9 100644
+--- a/docs/UX-FLUJO.md
++++ b/docs/UX-FLUJO.md
+@@ -18,7 +18,7 @@ La app tiene **dos capas**: marketing (entender) y producto (hacer). Nadie aterr
+ Invitado                         Sesión iniciada
+ ────────                         ──────────────
+ /  Landing                       /  Landing (sigue accesible)
+-   ├ Cómo funciona               /inicio  Panel
++   ├ sección Cómo funciona       /inicio  Panel
+    ├ Beneficios                  /viajes  Buscar
+    └ CTA registro / ver viajes   /viajes/:id
+ /viajes  Explorar (solo lectura) /publicar
+diff --git a/src/components/FiltroViajes.vue b/src/components/FiltroViajes.vue
+index b020872..17651c2 100644
+--- a/src/components/FiltroViajes.vue
++++ b/src/components/FiltroViajes.vue
+@@ -1,7 +1,6 @@
+ <script setup lang="ts">
+ import { ref, watch } from 'vue'
+ import type { FiltroViajes } from '@/types'
+-import IconoRide from '@/components/IconoRide.vue'
+ 
+ const props = defineProps<{
+   inicial?: FiltroViajes
+@@ -14,171 +13,274 @@ const emit = defineEmits<{
+ const origen = ref(props.inicial?.origen ?? '')
+ const destino = ref(props.inicial?.destino ?? '')
+ const hora = ref(props.inicial?.hora ?? '')
++const zona = ref(props.inicial?.zona ?? '')
+ 
+-const zonas = ['San Diego', 'Naguanagua', 'Valencia centro', 'Prebo', 'Campus UJAP']
++const zonas = [
++  'Todas',
++  'San Diego',
++  'Naguanagua',
++  'Valencia centro',
++  'Prebo',
++  'El Trigal',
++  'Campus UJAP',
++  'Los Guayos',
++]
+ 
+ function emitirFiltro() {
+-  emit('filtrar', { origen: origen.value, destino: destino.value, hora: hora.value })
++  emit('filtrar', {
++    origen: origen.value,
++    destino: destino.value,
++    hora: hora.value,
++    zona: zona.value || undefined,
++  })
+ }
+ 
+ function limpiar() {
+   origen.value = ''
+   destino.value = ''
+   hora.value = ''
++  zona.value = ''
+   emitirFiltro()
+ }
+ 
+-function aplicarZona(zona: string) {
+-  origen.value = zona
+-  if (!destino.value) destino.value = 'Campus UJAP'
++/** Zone chip matches that place anywhere on the route (origen, destino or encuentro). */
++function aplicarZona(nombre: string) {
++  if (nombre === 'Todas') {
++    limpiar()
++    return
++  }
++  zona.value = nombre
++  // Clear text fields so the chip is the single source of truth (can re-type to refine).
++  origen.value = ''
++  destino.value = ''
++  emitirFiltro()
++}
++
++function zonaActiva(nombre: string) {
++  if (nombre === 'Todas') {
++    return !zona.value && !origen.value && !destino.value
++  }
++  return zona.value === nombre
++}
++
++function onCampoTexto() {
++  // Typing overrides the chip so origen/destino become the active criteria.
++  if (origen.value || destino.value) zona.value = ''
+   emitirFiltro()
+ }
+ 
+-watch([origen, destino, hora], emitirFiltro, { immediate: true })
++watch(hora, emitirFiltro, { immediate: true })
+ </script>
+ 
+ <template>
+-  <section class="filtro-viajes" aria-label="Filtrar viajes">
+-    <p class="filtro-titulo">¿De dónde sales?</p>
+-    <div class="zonas">
+-      <button
+-        v-for="zona in zonas"
+-        :key="zona"
+-        type="button"
+-        class="zona"
+-        :class="{ 'is-on': origen === zona }"
+-        @click="aplicarZona(zona)"
+-      >
+-        {{ zona }}
+-      </button>
++  <section class="filtro" aria-labelledby="filter-heading">
++    <h2 id="filter-heading" class="sr-only">Filtro de búsqueda de viajes</h2>
++
++    <div class="zonas-block">
++      <span class="zonas-label">Filtrar rápidamente por zona</span>
++      <div class="zonas">
++        <button
++          v-for="z in zonas"
++          :key="z"
++          type="button"
++          class="zona"
++          :class="{
++            'is-on': zonaActiva(z),
++            'is-campus': z === 'Campus UJAP',
++          }"
++          @click="aplicarZona(z)"
++        >
++          {{ z === 'Todas' ? 'Todas las zonas' : z }}
++        </button>
++      </div>
+     </div>
+ 
+-    <div class="filtro-campos">
+-      <label class="filtro-campo">
+-        <span><IconoRide nombre="encuentro" /> Origen</span>
+-        <input v-model="origen" type="text" placeholder="San Diego, Naguanagua…" />
++    <form class="campos" @submit.prevent="emitirFiltro">
++      <label class="campo campo--wide">
++        <span>Punto de origen</span>
++        <input
++          v-model="origen"
++          type="text"
++          placeholder="Ej. Naguanagua, Prebo, San Diego…"
++          @input="onCampoTexto"
++        />
+       </label>
+-      <label class="filtro-campo">
+-        <span><IconoRide nombre="campus" /> Destino</span>
+-        <input v-model="destino" type="text" placeholder="Campus UJAP" />
++      <label class="campo campo--wide">
++        <span>Destino</span>
++        <div class="destino-wrap">
++          <input
++            v-model="destino"
++            type="text"
++            placeholder="Campus UJAP o destino…"
++            @input="onCampoTexto"
++          />
++          <span class="ujap-tag">UJAP</span>
++        </div>
+       </label>
+-      <label class="filtro-campo">
+-        <span><IconoRide nombre="ruta" /> Hora desde</span>
++      <label class="campo">
++        <span>Hora mínima</span>
+         <input v-model="hora" type="time" />
+       </label>
+-    </div>
++      <button type="submit" class="btn-buscar">Buscar</button>
++    </form>
+ 
+-    <button type="button" class="btn-limpiar" @click="limpiar">Quitar filtros</button>
++    <div class="filtro-foot">
++      <p class="trust-line">Solo comunidad con correo institucional · Actualización al cargar</p>
++      <button type="button" class="btn-limpiar" @click="limpiar">Quitar todos los filtros</button>
++    </div>
+   </section>
+ </template>
+ 
+ <style scoped>
+-.filtro-viajes {
+-  display: grid;
+-  gap: 0.85rem;
+-  padding: 1.15rem 1.2rem 1.2rem;
++.sr-only {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0, 0, 0, 0);
++  border: 0;
++}
++.filtro {
++  padding: 1.25rem 1.2rem;
+   border: 1px solid var(--color-border);
+-  border-radius: 1rem;
++  border-radius: 1.15rem;
+   background: var(--color-background);
++  box-shadow: 0 4px 20px color-mix(in srgb, var(--color-heading) 5%, transparent);
+ }
+-
+-.filtro-titulo {
+-  margin: 0;
+-  font-size: 0.78rem;
+-  font-weight: 700;
+-  letter-spacing: 0.06em;
++.zonas-block {
++  margin-bottom: 1.1rem;
++}
++.zonas-label {
++  display: block;
++  margin-bottom: 0.55rem;
++  font-size: 0.7rem;
++  font-weight: 800;
++  letter-spacing: 0.08em;
+   text-transform: uppercase;
+   color: var(--color-text);
+-  opacity: 0.55;
++  opacity: 0.65;
+ }
+-
+ .zonas {
+   display: flex;
+   flex-wrap: wrap;
+-  gap: 0.45rem;
++  gap: 0.4rem;
+ }
+-
+ .zona {
+-  padding: 0.4rem 0.8rem;
+-  border: 1px solid var(--ride-green-border);
+-  border-radius: 999px;
+-  background: transparent;
++  padding: 0.4rem 0.75rem;
++  border: 1px solid var(--color-border);
++  border-radius: 0.65rem;
++  background: var(--color-background-soft);
+   color: var(--color-heading);
+-  font-size: 0.8rem;
+-  font-weight: 600;
+-  font-family: inherit;
++  font-size: 0.75rem;
++  font-weight: 650;
+   cursor: pointer;
++  font-family: inherit;
+ }
+-
+-.zona.is-on,
+-.zona:hover {
++.zona.is-on {
++  background: var(--ride-green);
++  border-color: var(--ride-green);
++  color: #fff;
++}
++.zona.is-campus:not(.is-on) {
+   background: var(--ride-green-light);
++  border-color: var(--ride-green-border);
+   color: var(--ride-green-fg);
+-  border-color: var(--ride-green);
+ }
+-
+-.filtro-campos {
++.campos {
+   display: grid;
++  gap: 0.75rem;
+   grid-template-columns: 1fr;
+-  gap: 0.7rem;
+ }
+-
+-@media (min-width: 720px) {
+-  .filtro-campos {
+-    grid-template-columns: 1fr 1fr 8.5rem;
++@media (min-width: 900px) {
++  .campos {
++    grid-template-columns: 1.2fr 1.2fr 7.5rem auto;
++    align-items: end;
+   }
+ }
+-
+-.filtro-campo {
++.campo {
+   display: flex;
+   flex-direction: column;
+   gap: 0.35rem;
+-  font-size: 0.78rem;
+-  font-weight: 700;
+ }
+-
+-.filtro-campo span {
+-  display: inline-flex;
+-  align-items: center;
+-  gap: 0.35rem;
+-  color: var(--color-text);
+-  opacity: 0.75;
+-}
+-
+-.filtro-campo :deep(.icono) {
+-  width: 0.95rem;
+-  height: 0.95rem;
+-  color: var(--ride-green-fg);
++.campo span {
++  font-size: 0.72rem;
++  font-weight: 750;
++  color: var(--color-heading);
+ }
+-
+-.filtro-campo input {
+-  min-height: 2.55rem;
+-  padding: 0.45rem 0.75rem;
++.campo input {
++  min-height: 2.6rem;
++  padding: 0.55rem 0.8rem;
+   border: 1px solid var(--color-border);
+-  border-radius: 10px;
++  border-radius: 0.75rem;
+   background: var(--color-background-soft);
+-  color: var(--color-text);
+-  font-size: 0.95rem;
++  color: var(--color-heading);
++  font-size: 0.9rem;
+   font-family: inherit;
+ }
+-
+-.filtro-campo input:focus {
+-  outline: 2px solid var(--ride-green);
+-  outline-offset: 1px;
++.campo input:focus {
++  outline: none;
++  border-color: var(--ride-green);
++  box-shadow: 0 0 0 3px var(--ride-green-light);
++}
++.destino-wrap {
++  position: relative;
++}
++.destino-wrap input {
++  width: 100%;
++  padding-right: 3.2rem;
++}
++.ujap-tag {
++  position: absolute;
++  right: 0.55rem;
++  top: 50%;
++  transform: translateY(-50%);
++  font-size: 0.65rem;
++  font-weight: 800;
++  padding: 0.15rem 0.4rem;
++  border-radius: 0.35rem;
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++}
++.btn-buscar {
++  min-height: 2.6rem;
++  padding: 0 1.1rem;
++  border: none;
++  border-radius: 0.75rem;
++  background: var(--color-heading);
++  color: var(--color-background);
++  font-weight: 750;
++  font-size: 0.85rem;
++  cursor: pointer;
++}
++.btn-buscar:hover {
++  background: var(--ride-green);
++  color: #fff;
++}
++.filtro-foot {
++  margin-top: 0.9rem;
++  padding-top: 0.85rem;
++  border-top: 1px solid var(--color-border);
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  justify-content: space-between;
++  gap: 0.65rem;
++}
++.trust-line {
++  margin: 0;
++  font-size: 0.75rem;
++  color: var(--color-text);
+ }
+-
+ .btn-limpiar {
+-  justify-self: start;
+-  padding: 0.45rem 0.9rem;
+   border: none;
+   background: none;
+   color: var(--ride-green-fg);
+-  font-weight: 700;
+-  font-size: 0.85rem;
++  font-weight: 750;
++  font-size: 0.78rem;
+   cursor: pointer;
+-  font-family: inherit;
+ }
+-
+ .btn-limpiar:hover {
+   text-decoration: underline;
+ }
+diff --git a/src/components/FormularioPublicarViaje.vue b/src/components/FormularioPublicarViaje.vue
+index eb1195e..4b52e48 100644
+--- a/src/components/FormularioPublicarViaje.vue
++++ b/src/components/FormularioPublicarViaje.vue
+@@ -1,7 +1,8 @@
+ <script setup lang="ts">
+-import { reactive, ref } from 'vue'
++import { nextTick, onMounted, reactive, ref } from 'vue'
+ import { useAuthStore } from '@/stores/auth'
+ import type { NuevoViaje } from '@/types'
++import MapaTrayecto, { type InfoRuta, type PuntoMapa } from '@/components/MapaTrayecto.vue'
+ 
+ const auth = useAuthStore()
+ const emit = defineEmits<{ publicar: [viaje: NuevoViaje] }>()
+@@ -14,21 +15,57 @@ const form = reactive({
+   puntoEncuentro: '',
+   fecha: hoy,
+   hora: '',
+-  cuposDisponibles: 1,
++  cuposDisponibles: 3,
+   descripcionVehiculo: '',
++  origenLat: null as number | null,
++  origenLng: null as number | null,
++  destinoLat: null as number | null,
++  destinoLng: null as number | null,
+ })
+ 
++const origenMapa = ref<PuntoMapa | null>(null)
++const destinoMapa = ref<PuntoMapa | null>(null)
++const infoRuta = ref<InfoRuta>(null)
++const mapaRef = ref<InstanceType<typeof MapaTrayecto> | null>(null)
++const inputOrigen = ref<HTMLInputElement | null>(null)
++const inputDestino = ref<HTMLInputElement | null>(null)
++
+ const errores = reactive<Partial<Record<string, string>>>({})
+ const enviado = ref(false)
+ 
++function onOrigen(p: PuntoMapa) {
++  origenMapa.value = p
++  form.origenLat = p.lat
++  form.origenLng = p.lng
++  if (p.label) form.origen = p.label
++  else if (!form.origen.trim()) form.origen = `Punto A (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`
++}
++
++function onDestino(p: PuntoMapa) {
++  destinoMapa.value = p
++  form.destinoLat = p.lat
++  form.destinoLng = p.lng
++  if (p.label) form.destino = p.label
++  else if (!form.destino.trim()) form.destino = `Punto B (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`
++}
++
++async function buscarEnMapa(tipo: 'origen' | 'destino') {
++  const texto = tipo === 'origen' ? form.origen : form.destino
++  const punto = await mapaRef.value?.geocodeTexto(texto, tipo)
++  if (punto) {
++    if (tipo === 'origen') onOrigen(punto)
++    else onDestino(punto)
++  }
++}
++
+ function validar(): boolean {
+-  errores['origen'] = form.origen.trim() ? undefined : 'El origen es requerido'
+-  errores['destino'] = form.destino.trim() ? undefined : 'El destino es requerido'
+-  errores['fecha'] = form.fecha ? undefined : 'La fecha es requerida'
+-  errores['hora'] = form.hora ? undefined : 'La hora es requerida'
++  errores['origen'] = form.origen.trim() ? undefined : '¿Cuál es el punto de salida?'
++  errores['destino'] = form.destino.trim() ? undefined : '¿Cuál es el destino?'
++  errores['fecha'] = form.fecha ? undefined : '¿Qué día sales?'
++  errores['hora'] = form.hora ? undefined : '¿A qué hora sales?'
+   errores['descripcionVehiculo'] = form.descripcionVehiculo.trim()
+     ? undefined
+-    : 'Describe tu vehículo (marca, modelo, color, placa)'
++    : '¿Cómo es tu vehículo (marca, modelo, color, placa)?'
+   errores['cuposDisponibles'] =
+     form.cuposDisponibles >= 1 && form.cuposDisponibles <= 8
+       ? undefined
+@@ -38,8 +75,9 @@ function validar(): boolean {
+ 
+ function handleSubmit() {
+   if (!validar()) return
++  if (!auth.estaAutenticado) return
+ 
+-  const nuevoViaje: NuevoViaje = {
++  emit('publicar', {
+     origen: form.origen.trim(),
+     destino: form.destino.trim(),
+     puntoEncuentro: form.puntoEncuentro.trim() || undefined,
+@@ -47,9 +85,11 @@ function handleSubmit() {
+     hora: form.hora,
+     cuposDisponibles: form.cuposDisponibles,
+     descripcionVehiculo: form.descripcionVehiculo.trim(),
+-  }
+-
+-  emit('publicar', nuevoViaje)
++    origenLat: form.origenLat,
++    origenLng: form.origenLng,
++    destinoLat: form.destinoLat,
++    destinoLng: form.destinoLng,
++  })
+   enviado.value = true
+ 
+   form.origen = ''
+@@ -57,155 +97,364 @@ function handleSubmit() {
+   form.puntoEncuentro = ''
+   form.fecha = hoy
+   form.hora = ''
+-  form.cuposDisponibles = 1
++  form.cuposDisponibles = 3
+   form.descripcionVehiculo = ''
++  form.origenLat = null
++  form.origenLng = null
++  form.destinoLat = null
++  form.destinoLng = null
++  origenMapa.value = null
++  destinoMapa.value = null
++  infoRuta.value = null
+ 
+   setTimeout(() => (enviado.value = false), 3000)
+ }
++
++onMounted(async () => {
++  await nextTick()
++  // Espera a que el mapa cargue Places antes de enganchar autocomplete
++  const tryAttach = () => {
++    if (!mapaRef.value?.listo) {
++      setTimeout(tryAttach, 200)
++      return
++    }
++    if (inputOrigen.value) mapaRef.value.attachAutocomplete(inputOrigen.value, 'origen')
++    if (inputDestino.value) mapaRef.value.attachAutocomplete(inputDestino.value, 'destino')
++  }
++  tryAttach()
++})
+ </script>
+ 
+ <template>
+-  <form class="formulario-publicar" novalidate @submit.prevent="handleSubmit">
+-    <!-- Origen / Destino -->
+-    <div class="form-grid-2">
+-      <div class="campo">
+-        <label for="fp-origen">Punto de salida <span class="req">*</span></label>
+-        <input id="fp-origen" v-model="form.origen" type="text" placeholder="Ej. Entrada principal UJAP" :class="{ 'input-error': errores['origen'] }" />
+-        <span v-if="errores['origen']" class="error-msg">{{ errores['origen'] }}</span>
++  <form class="form-pub" novalidate @submit.prevent="handleSubmit">
++    <section class="card" aria-labelledby="ruta-titulo">
++      <header class="card-head">
++        <div>
++          <h2 id="ruta-titulo">Datos del recorrido</h2>
++          <p>Escribe un lugar (Google lo ubica) o marca A/B en el mapa.</p>
++        </div>
++        <span class="paso">Paso 1 de 2</span>
++      </header>
++
++      <div class="grid-2">
++        <div class="campo">
++          <label for="fp-origen">
++            <span class="dot dot--a" aria-hidden="true" />
++            Punto de salida <span class="req">*</span>
++          </label>
++          <div class="input-row">
++            <input
++              id="fp-origen"
++              ref="inputOrigen"
++              v-model="form.origen"
++              type="text"
++              placeholder="Ej. Naguanagua, Prebo, San Diego…"
++              autocomplete="off"
++              :class="{ 'input-error': errores['origen'] }"
++              @keydown.enter.prevent="buscarEnMapa('origen')"
++            />
++            <button type="button" class="btn-mini" @click="buscarEnMapa('origen')">Buscar</button>
++          </div>
++          <span v-if="errores['origen']" class="error-msg">{{ errores['origen'] }}</span>
++        </div>
++
++        <div class="campo">
++          <label for="fp-destino">
++            <span class="dot dot--b" aria-hidden="true" />
++            Destino <span class="req">*</span>
++          </label>
++          <div class="input-row">
++            <input
++              id="fp-destino"
++              ref="inputDestino"
++              v-model="form.destino"
++              type="text"
++              placeholder="Campus UJAP, San Diego…"
++              autocomplete="off"
++              :class="{ 'input-error': errores['destino'] }"
++              @keydown.enter.prevent="buscarEnMapa('destino')"
++            />
++            <button type="button" class="btn-mini" @click="buscarEnMapa('destino')">Buscar</button>
++          </div>
++          <span v-if="errores['destino']" class="error-msg">{{ errores['destino'] }}</span>
++        </div>
+       </div>
++
+       <div class="campo">
+-        <label for="fp-destino">Destino <span class="req">*</span></label>
+-        <input id="fp-destino" v-model="form.destino" type="text" placeholder="Ej. Terminal San Diego" :class="{ 'input-error': errores['destino'] }" />
+-        <span v-if="errores['destino']" class="error-msg">{{ errores['destino'] }}</span>
++        <label for="fp-encuentro">
++          Punto de encuentro exacto <span class="opt">(recomendado)</span>
++        </label>
++        <input
++          id="fp-encuentro"
++          v-model="form.puntoEncuentro"
++          type="text"
++          placeholder="Ej. Portón principal, frente a la caseta"
++        />
+       </div>
+-    </div>
+ 
+-    <!-- Punto de encuentro -->
+-    <div class="campo">
+-      <label for="fp-encuentro">Punto de encuentro exacto <span class="opt">(opcional)</span></label>
+-      <input id="fp-encuentro" v-model="form.puntoEncuentro" type="text" placeholder="Ej. Portón principal, frente a la caseta de seguridad" />
+-    </div>
++      <MapaTrayecto
++        ref="mapaRef"
++        :origen="origenMapa"
++        :destino="destinoMapa"
++        editable
++        height="320px"
++        @update:origen="onOrigen"
++        @update:destino="onDestino"
++        @update:ruta="infoRuta = $event"
++      />
++      <p v-if="infoRuta" class="ruta-info">
++        Trayecto estimado: <strong>{{ infoRuta.distanciaTexto }}</strong> ·
++        <strong>{{ infoRuta.duracionTexto }}</strong>
++      </p>
++    </section>
+ 
+-    <!-- Fecha / Hora / Cupos -->
+-    <div class="form-grid-3">
+-      <div class="campo">
+-        <label for="fp-fecha">Fecha <span class="req">*</span></label>
+-        <input id="fp-fecha" v-model="form.fecha" type="date" :min="hoy" :class="{ 'input-error': errores['fecha'] }" />
+-        <span v-if="errores['fecha']" class="error-msg">{{ errores['fecha'] }}</span>
+-      </div>
+-      <div class="campo">
+-        <label for="fp-hora">Hora de salida <span class="req">*</span></label>
+-        <input id="fp-hora" v-model="form.hora" type="time" :class="{ 'input-error': errores['hora'] }" />
+-        <span v-if="errores['hora']" class="error-msg">{{ errores['hora'] }}</span>
++    <section class="card" aria-labelledby="hora-titulo">
++      <header class="card-head">
++        <div>
++          <h2 id="hora-titulo">Horario y capacidad</h2>
++          <p>Fecha, hora de salida y asientos libres.</p>
++        </div>
++        <span class="paso">Paso 2 de 2</span>
++      </header>
++
++      <div class="grid-3">
++        <div class="campo">
++          <label for="fp-fecha">Fecha <span class="req">*</span></label>
++          <input
++            id="fp-fecha"
++            v-model="form.fecha"
++            type="date"
++            :min="hoy"
++            :class="{ 'input-error': errores['fecha'] }"
++          />
++          <span v-if="errores['fecha']" class="error-msg">{{ errores['fecha'] }}</span>
++        </div>
++        <div class="campo">
++          <label for="fp-hora">Hora de salida <span class="req">*</span></label>
++          <input
++            id="fp-hora"
++            v-model="form.hora"
++            type="time"
++            :class="{ 'input-error': errores['hora'] }"
++          />
++          <span v-if="errores['hora']" class="error-msg">{{ errores['hora'] }}</span>
++        </div>
++        <div class="campo">
++          <label for="fp-cupos">Cupos disponibles <span class="req">*</span></label>
++          <select id="fp-cupos" v-model.number="form.cuposDisponibles">
++            <option v-for="n in 8" :key="n" :value="n">
++              {{ n }} cupo{{ n === 1 ? '' : 's' }}
++            </option>
++          </select>
++        </div>
+       </div>
++
+       <div class="campo">
+-        <label for="fp-cupos">Cupos disponibles <span class="req">*</span></label>
+-        <input id="fp-cupos" v-model.number="form.cuposDisponibles" type="number" min="1" max="8" :class="{ 'input-error': errores['cuposDisponibles'] }" />
+-        <span v-if="errores['cuposDisponibles']" class="error-msg">{{ errores['cuposDisponibles'] }}</span>
++        <label for="fp-vehiculo">Descripción del vehículo <span class="req">*</span></label>
++        <input
++          id="fp-vehiculo"
++          v-model="form.descripcionVehiculo"
++          type="text"
++          placeholder="Ej. Toyota Corolla gris, placa AB123CD"
++          :class="{ 'input-error': errores['descripcionVehiculo'] }"
++        />
++        <span v-if="errores['descripcionVehiculo']" class="error-msg">{{
++          errores['descripcionVehiculo']
++        }}</span>
++        <span class="ayuda">Para que los pasajeros identifiquen tu auto al abordaje.</span>
+       </div>
+-    </div>
+-
+-    <!-- Vehículo -->
+-    <div class="campo">
+-      <label for="fp-vehiculo">Descripción del vehículo <span class="req">*</span></label>
+-      <input id="fp-vehiculo" v-model="form.descripcionVehiculo" type="text" placeholder="Ej. Toyota Corolla gris, placa AB123CD" :class="{ 'input-error': errores['descripcionVehiculo'] }" />
+-      <span v-if="errores['descripcionVehiculo']" class="error-msg">{{ errores['descripcionVehiculo'] }}</span>
+-      <span class="ayuda">Para que los pasajeros identifiquen tu vehículo fácilmente</span>
+-    </div>
++    </section>
+ 
+-    <div class="form-acciones">
+-      <button type="submit" class="btn-publicar">Publicar viaje</button>
++    <div class="acciones">
++      <button type="submit" class="btn-publicar">Publicar mi viaje ahora</button>
+       <p v-if="enviado" class="exito" role="status">Viaje publicado correctamente</p>
+     </div>
++    <p class="legal">
++      Al publicar confirmas cumplir las normas de tránsito y el reglamento de convivencia UJAP. RideUJAP
++      no es un servicio de taxi ni cobro comercial.
++    </p>
+   </form>
+ </template>
+ 
+ <style scoped>
+-.formulario-publicar {
+-  display: flex;
+-  flex-direction: column;
++.form-pub {
++  display: grid;
+   gap: 1.25rem;
+ }
+-
+-.form-grid-2,
+-.form-grid-3 {
++.card {
++  padding: 1.35rem 1.25rem;
++  border: 1px solid var(--color-border);
++  border-radius: 1.15rem;
++  background: var(--color-background);
++  box-shadow: 0 4px 20px color-mix(in srgb, var(--color-heading) 5%, transparent);
++}
++@media (min-width: 640px) {
++  .card {
++    padding: 1.6rem 1.5rem;
++  }
++}
++.card-head {
++  display: flex;
++  align-items: flex-start;
++  justify-content: space-between;
++  gap: 1rem;
++  margin-bottom: 1.15rem;
++  padding-bottom: 0.9rem;
++  border-bottom: 1px solid var(--color-border);
++}
++.card-head h2 {
++  margin: 0;
++  font-size: 1.1rem;
++  font-weight: 800;
++  color: var(--color-heading);
++}
++.card-head p {
++  margin: 0.25rem 0 0;
++  font-size: 0.82rem;
++  color: var(--color-text);
++}
++.paso {
++  flex-shrink: 0;
++  font-size: 0.7rem;
++  font-weight: 700;
++  padding: 0.3rem 0.65rem;
++  border-radius: 999px;
++  background: var(--color-background-mute);
++  color: var(--color-text);
++  border: 1px solid var(--color-border);
++}
++.grid-2,
++.grid-3 {
+   display: grid;
+-  gap: 1.25rem;
+-  grid-template-columns: 1fr;
++  gap: 0.9rem;
++  margin-bottom: 0.9rem;
+ }
+-
+-@media (min-width: 600px) {
+-  .form-grid-2 { grid-template-columns: 1fr 1fr; }
+-  .form-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
++@media (min-width: 640px) {
++  .grid-2 {
++    grid-template-columns: 1fr 1fr;
++  }
++  .grid-3 {
++    grid-template-columns: 1fr 1fr 1fr;
++  }
+ }
+-
+ .campo {
+   display: flex;
+   flex-direction: column;
+   gap: 0.35rem;
++  margin-bottom: 0.85rem;
+ }
+-
+ .campo label {
+-  font-size: 0.875rem;
+-  font-weight: 600;
++  display: inline-flex;
++  align-items: center;
++  gap: 0.4rem;
++  font-size: 0.75rem;
++  font-weight: 750;
++  text-transform: uppercase;
++  letter-spacing: 0.04em;
+   color: var(--color-heading);
+ }
+-
+-.req { color: #e74c3c; }
+-.opt { font-weight: 400; font-size: 0.78rem; color: var(--color-text); opacity: 0.6; }
+-
+-.campo input {
+-  padding: 0.65rem 0.875rem;
+-  border: 1.5px solid var(--color-border);
+-  border-radius: 8px;
+-  background: var(--color-background);
++.dot {
++  width: 0.5rem;
++  height: 0.5rem;
++  border-radius: 999px;
++}
++.dot--a {
++  background: var(--ride-green);
++  box-shadow: 0 0 0 3px var(--ride-green-light);
++}
++.dot--b {
++  background: #dc2626;
++  box-shadow: 0 0 0 3px color-mix(in srgb, #dc2626 18%, transparent);
++}
++.req {
++  color: #dc2626;
++  text-transform: none;
++}
++.opt {
++  font-weight: 500;
++  text-transform: none;
++  letter-spacing: 0;
+   color: var(--color-text);
+-  font-size: 0.95rem;
++  opacity: 0.7;
++}
++.input-row {
++  display: flex;
++  gap: 0.45rem;
++}
++.campo input,
++.campo select {
++  width: 100%;
++  padding: 0.7rem 0.85rem;
++  border: 1.5px solid var(--color-border);
++  border-radius: 0.75rem;
++  background: var(--color-background-soft);
++  color: var(--color-heading);
++  font-size: 0.92rem;
+   font-family: inherit;
+-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+ }
+-
+-.campo input:focus {
++.campo input:focus,
++.campo select:focus {
+   outline: none;
+   border-color: var(--ride-green);
+   box-shadow: 0 0 0 3px var(--ride-green-light);
+ }
+-
+-.campo input.input-error { border-color: #e74c3c; }
+-.error-msg { font-size: 0.8rem; color: #e74c3c; font-weight: 500; }
+-.ayuda { font-size: 0.78rem; color: var(--color-text); opacity: 0.6; }
+-
+-.form-acciones {
++.campo input.input-error {
++  border-color: #dc2626;
++}
++.btn-mini {
++  flex-shrink: 0;
++  padding: 0 0.85rem;
++  border: 1px solid var(--color-border);
++  border-radius: 0.75rem;
++  background: var(--color-background);
++  color: var(--ride-green-fg);
++  font-weight: 700;
++  font-size: 0.78rem;
++  cursor: pointer;
++}
++.error-msg {
++  font-size: 0.78rem;
++  color: #dc2626;
++  font-weight: 600;
++}
++.ayuda {
++  font-size: 0.75rem;
++  color: var(--color-text);
++}
++.ruta-info {
++  margin: 0.55rem 0 0;
++  font-size: 0.85rem;
++  color: var(--color-text);
++}
++.acciones {
+   display: flex;
+-  align-items: center;
+-  gap: 1rem;
+   flex-wrap: wrap;
+-  padding-top: 0.5rem;
++  align-items: center;
++  gap: 0.85rem;
+ }
+-
+ .btn-publicar {
+-  padding: 0.75rem 2rem;
++  padding: 0.85rem 1.5rem;
+   border: none;
+-  border-radius: 8px;
++  border-radius: 0.85rem;
+   background: var(--ride-green);
+   color: #fff;
+-  font-weight: 700;
+-  font-size: 1rem;
++  font-weight: 800;
++  font-size: 0.95rem;
+   cursor: pointer;
+-  font-family: inherit;
+-  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+-  box-shadow: 0 2px 8px rgba(11, 110, 79, 0.25);
++  box-shadow: 0 8px 18px color-mix(in srgb, var(--ride-green) 28%, transparent);
+ }
+-
+ .btn-publicar:hover {
+   background: var(--ride-green-hover);
+-  transform: translateY(-1px);
+-  box-shadow: 0 4px 14px rgba(11, 110, 79, 0.35);
+ }
+-
+ .exito {
+-  font-size: 0.9rem;
+-  font-weight: 600;
+-  color: var(--ride-green);
++  margin: 0;
++  font-weight: 700;
++  color: var(--ride-green-fg);
++}
++.legal {
++  margin: 0;
++  text-align: center;
++  font-size: 0.75rem;
++  color: var(--color-text);
+ }
+ </style>
+diff --git a/src/components/MapaTrayecto.vue b/src/components/MapaTrayecto.vue
+new file mode 100644
+index 0000000..319a43b
+--- /dev/null
++++ b/src/components/MapaTrayecto.vue
+@@ -0,0 +1,504 @@
++<script setup lang="ts">
++/**
++ * Mapa A→B (Carabobo / UJAP).
++ * - Clic para fijar puntos (editable)
++ * - Geocoding / Places: escribir un lugar → marca en el mapa
++ * - Directions: dibuja la vía real (no solo línea recta)
++ * - Geolocalización: “usar mi ubicación”
++ */
++import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
++import { setOptions, importLibrary } from '@googlemaps/js-api-loader'
++
++export type PuntoMapa = { lat: number; lng: number; label?: string }
++
++export type InfoRuta = {
++  distanciaTexto: string
++  duracionTexto: string
++  distanciaMetros: number
++  duracionSegundos: number
++} | null
++
++const props = withDefaults(
++  defineProps<{
++    origen?: PuntoMapa | null
++    destino?: PuntoMapa | null
++    editable?: boolean
++    height?: string
++  }>(),
++  {
++    origen: null,
++    destino: null,
++    editable: false,
++    height: '300px',
++  },
++)
++
++const emit = defineEmits<{
++  'update:origen': [PuntoMapa]
++  'update:destino': [PuntoMapa]
++  'update:ruta': [InfoRuta]
++}>()
++
++const contenedor = ref<HTMLElement | null>(null)
++const error = ref<string | null>(null)
++const listo = ref(false)
++const modo = ref<'origen' | 'destino'>('origen')
++const geocoding = ref(false)
++const ubicando = ref(false)
++const infoRuta = ref<InfoRuta>(null)
++const avisoRuta = ref('')
++
++const API_KEY = import.meta.env.VITE_GOOGLE_MAPS_API_KEY as string | undefined
++
++/** Centro por defecto: Valencia / San Diego (Carabobo) */
++const CENTRO_CARABOBO = { lat: 10.183, lng: -68.0 }
++const BOUNDS_CARABOBO = {
++  north: 10.45,
++  south: 9.85,
++  east: -67.7,
++  west: -68.45,
++}
++
++let mapa: google.maps.Map | null = null
++let marcadorOrigen: google.maps.Marker | null = null
++let marcadorDestino: google.maps.Marker | null = null
++let lineaFallback: google.maps.Polyline | null = null
++let directionsService: google.maps.DirectionsService | null = null
++let directionsRenderer: google.maps.DirectionsRenderer | null = null
++let geocoder: google.maps.Geocoder | null = null
++const autocompletes: google.maps.places.Autocomplete[] = []
++
++const metaRuta = computed(() => {
++  if (!infoRuta.value) return ''
++  return `${infoRuta.value.distanciaTexto} · ${infoRuta.value.duracionTexto}`
++})
++
++async function init() {
++  if (!API_KEY) {
++    error.value =
++      'Falta VITE_GOOGLE_MAPS_API_KEY. Activa Maps JavaScript, Geocoding, Places y Directions en Google Cloud.'
++    return
++  }
++  if (!contenedor.value) return
++
++  try {
++    setOptions({
++      key: API_KEY,
++      v: 'weekly',
++    })
++    const { Map } = (await importLibrary('maps')) as google.maps.MapsLibrary
++    await importLibrary('geocoding')
++    await importLibrary('places')
++    try {
++      await importLibrary('routes')
++    } catch {
++      /* DirectionsService sigue disponible en google.maps tras maps */
++    }
++
++    geocoder = new google.maps.Geocoder()
++    directionsService = new google.maps.DirectionsService()
++
++    mapa = new Map(contenedor.value, {
++      center: props.origen ?? CENTRO_CARABOBO,
++      zoom: 12,
++      mapTypeControl: false,
++      streetViewControl: false,
++      fullscreenControl: false,
++      restriction: {
++        latLngBounds: BOUNDS_CARABOBO,
++        strictBounds: false,
++      },
++    })
++
++    directionsRenderer = new google.maps.DirectionsRenderer({
++      map: mapa,
++      suppressMarkers: true,
++      polylineOptions: {
++        strokeColor: '#0b6e4f',
++        strokeOpacity: 0.95,
++        strokeWeight: 5,
++      },
++    })
++
++    if (props.editable) {
++      mapa.addListener('click', (e: google.maps.MapMouseEvent) => {
++        if (!e.latLng) return
++        void colocarDesdeClick(e.latLng.lat(), e.latLng.lng())
++      })
++    }
++
++    listo.value = true
++    await pintar()
++  } catch (e) {
++    console.error(e)
++    error.value =
++      'No se pudo cargar Google Maps. Revisa la API key y habilita Maps JavaScript, Geocoding, Places y Directions.'
++  }
++}
++
++async function colocarDesdeClick(lat: number, lng: number) {
++  const label = await reverseGeocode(lat, lng)
++  const punto: PuntoMapa = {
++    lat,
++    lng,
++    label: label || (modo.value === 'origen' ? 'Origen' : 'Destino'),
++  }
++  if (modo.value === 'origen') emit('update:origen', punto)
++  else emit('update:destino', punto)
++  modo.value = modo.value === 'origen' ? 'destino' : 'origen'
++}
++
++async function reverseGeocode(lat: number, lng: number): Promise<string | null> {
++  if (!geocoder) return null
++  try {
++    const { results } = await geocoder.geocode({ location: { lat, lng } })
++    return results[0]?.formatted_address ?? null
++  } catch {
++    return null
++  }
++}
++
++/** Busca un lugar por nombre y fija origen o destino. */
++async function geocodeTexto(
++  texto: string,
++  tipo: 'origen' | 'destino',
++): Promise<PuntoMapa | null> {
++  const q = texto.trim()
++  if (!q || !geocoder) return null
++  geocoding.value = true
++  avisoRuta.value = ''
++  try {
++    const { results } = await geocoder.geocode({
++      address: `${q}, Carabobo, Venezuela`,
++      componentRestrictions: { country: 've' },
++      bounds: BOUNDS_CARABOBO,
++    })
++    const best = results[0]
++    if (!best?.geometry?.location) {
++      avisoRuta.value = `No encontramos “${q}” en Carabobo. Prueba otro nombre o marca en el mapa.`
++      return null
++    }
++    const punto: PuntoMapa = {
++      lat: best.geometry.location.lat(),
++      lng: best.geometry.location.lng(),
++      label: best.formatted_address || q,
++    }
++    if (tipo === 'origen') emit('update:origen', punto)
++    else emit('update:destino', punto)
++    return punto
++  } catch (e) {
++    console.warn('[MapaTrayecto] geocode', e)
++    avisoRuta.value = 'No se pudo geocodificar. Revisa que Geocoding API esté activa.'
++    return null
++  } finally {
++    geocoding.value = false
++  }
++}
++
++/** Usa GPS del dispositivo. */
++async function usarMiUbicacion(tipo: 'origen' | 'destino' = 'origen'): Promise<PuntoMapa | null> {
++  if (!navigator.geolocation) {
++    avisoRuta.value = 'Tu navegador no permite geolocalización.'
++    return null
++  }
++  ubicando.value = true
++  avisoRuta.value = ''
++  try {
++    const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
++      navigator.geolocation.getCurrentPosition(resolve, reject, {
++        enableHighAccuracy: true,
++        timeout: 12000,
++      })
++    })
++    const lat = pos.coords.latitude
++    const lng = pos.coords.longitude
++    const label = (await reverseGeocode(lat, lng)) || 'Mi ubicación'
++    const punto: PuntoMapa = { lat, lng, label }
++    if (tipo === 'origen') emit('update:origen', punto)
++    else emit('update:destino', punto)
++    return punto
++  } catch {
++    avisoRuta.value = 'No pudimos obtener tu ubicación. Permite el acceso o escribe el lugar.'
++    return null
++  } finally {
++    ubicando.value = false
++  }
++}
++
++/** Autocomplete de Google Places sobre un <input>. */
++function attachAutocomplete(
++  input: HTMLInputElement,
++  tipo: 'origen' | 'destino',
++): (() => void) | void {
++  if (!listo.value || !window.google?.maps?.places) return
++  const ac = new google.maps.places.Autocomplete(input, {
++    fields: ['geometry', 'formatted_address', 'name'],
++    componentRestrictions: { country: 've' },
++    bounds: new google.maps.LatLngBounds(
++      { lat: BOUNDS_CARABOBO.south, lng: BOUNDS_CARABOBO.west },
++      { lat: BOUNDS_CARABOBO.north, lng: BOUNDS_CARABOBO.east },
++    ),
++    strictBounds: false,
++  })
++  autocompletes.push(ac)
++  const listener = ac.addListener('place_changed', () => {
++    const place = ac.getPlace()
++    const loc = place.geometry?.location
++    if (!loc) return
++    const punto: PuntoMapa = {
++      lat: loc.lat(),
++      lng: loc.lng(),
++      label: place.formatted_address || place.name || input.value,
++    }
++    if (tipo === 'origen') emit('update:origen', punto)
++    else emit('update:destino', punto)
++  })
++  return () => {
++    google.maps.event.removeListener(listener)
++  }
++}
++
++async function trazarRuta() {
++  if (!mapa || !props.origen || !props.destino) {
++    infoRuta.value = null
++    emit('update:ruta', null)
++    directionsRenderer?.set('directions', null)
++    return
++  }
++
++  if (!directionsService || !directionsRenderer) {
++    dibujarLineaRecta()
++    return
++  }
++
++  try {
++    const result = await directionsService.route({
++      origin: props.origen,
++      destination: props.destino,
++      travelMode: google.maps.TravelMode.DRIVING,
++      region: 've',
++    })
++    directionsRenderer.setDirections(result)
++    lineaFallback?.setMap(null)
++    lineaFallback = null
++
++    const leg = result.routes[0]?.legs[0]
++    if (leg?.distance && leg.duration) {
++      infoRuta.value = {
++        distanciaTexto: leg.distance.text,
++        duracionTexto: leg.duration.text,
++        distanciaMetros: leg.distance.value,
++        duracionSegundos: leg.duration.value,
++      }
++      emit('update:ruta', infoRuta.value)
++      avisoRuta.value = ''
++    }
++  } catch (e) {
++    console.warn('[MapaTrayecto] directions', e)
++    avisoRuta.value =
++      'No se pudo trazar la vía (¿Directions API activa?). Mostramos línea directa.'
++    dibujarLineaRecta()
++  }
++}
++
++function dibujarLineaRecta() {
++  if (!mapa || !props.origen || !props.destino) return
++  directionsRenderer?.set('directions', null)
++  lineaFallback?.setMap(null)
++  lineaFallback = new google.maps.Polyline({
++    map: mapa,
++    path: [props.origen, props.destino],
++    strokeColor: '#0b6e4f',
++    strokeOpacity: 0.85,
++    strokeWeight: 4,
++  })
++  const bounds = new google.maps.LatLngBounds()
++  bounds.extend(props.origen)
++  bounds.extend(props.destino)
++  mapa.fitBounds(bounds, 48)
++  infoRuta.value = null
++  emit('update:ruta', null)
++}
++
++async function pintar() {
++  if (!mapa) return
++
++  marcadorOrigen?.setMap(null)
++  marcadorDestino?.setMap(null)
++
++  if (props.origen) {
++    marcadorOrigen = new google.maps.Marker({
++      map: mapa,
++      position: props.origen,
++      label: 'A',
++      title: props.origen.label ?? 'Origen',
++    })
++  }
++  if (props.destino) {
++    marcadorDestino = new google.maps.Marker({
++      map: mapa,
++      position: props.destino,
++      label: 'B',
++      title: props.destino.label ?? 'Destino',
++    })
++  }
++
++  if (props.origen && props.destino) {
++    await trazarRuta()
++  } else {
++    directionsRenderer?.set('directions', null)
++    lineaFallback?.setMap(null)
++    infoRuta.value = null
++    emit('update:ruta', null)
++    if (props.origen) {
++      mapa.setCenter(props.origen)
++      mapa.setZoom(14)
++    } else if (props.destino) {
++      mapa.setCenter(props.destino)
++      mapa.setZoom(14)
++    }
++  }
++}
++
++watch(() => [props.origen, props.destino], () => void pintar(), { deep: true })
++
++onMounted(() => {
++  void init()
++})
++
++onUnmounted(() => {
++  for (const ac of autocompletes) {
++    google.maps.event.clearInstanceListeners(ac)
++  }
++  marcadorOrigen?.setMap(null)
++  marcadorDestino?.setMap(null)
++  lineaFallback?.setMap(null)
++  directionsRenderer?.setMap(null)
++  mapa = null
++})
++
++defineExpose({
++  geocodeTexto,
++  usarMiUbicacion,
++  attachAutocomplete,
++  listo,
++})
++</script>
++
++<template>
++  <div class="mapa-trayecto">
++    <div v-if="editable && !error" class="mapa-toolbar">
++      <p class="mapa-hint">
++        Escribe un lugar (autocomplete), usa tu GPS, o haz clic:
++        <strong>{{ modo === 'origen' ? 'origen (A)' : 'destino (B)' }}</strong>
++      </p>
++      <div class="mapa-actions">
++        <button
++          type="button"
++          class="btn-map"
++          :disabled="ubicando || !listo"
++          @click="usarMiUbicacion('origen')"
++        >
++          {{ ubicando ? 'Ubicando…' : 'Mi ubicación → A' }}
++        </button>
++        <button
++          type="button"
++          class="btn-map btn-map--ghost"
++          :class="{ 'is-on': modo === 'origen' }"
++          @click="modo = 'origen'"
++        >
++          Clic = A
++        </button>
++        <button
++          type="button"
++          class="btn-map btn-map--ghost"
++          :class="{ 'is-on': modo === 'destino' }"
++          @click="modo = 'destino'"
++        >
++          Clic = B
++        </button>
++      </div>
++    </div>
++
++    <div v-if="error" class="mapa-fallback" role="status">{{ error }}</div>
++    <div ref="contenedor" class="mapa-canvas" :style="{ height }" :hidden="!!error" />
++
++    <div v-if="listo && !error" class="mapa-footer">
++      <p v-if="metaRuta" class="mapa-meta">
++        Vía estimada: <strong>{{ metaRuta }}</strong>
++      </p>
++      <p v-else-if="geocoding" class="mapa-meta">Buscando lugar…</p>
++      <p v-if="avisoRuta" class="mapa-aviso" role="status">{{ avisoRuta }}</p>
++    </div>
++  </div>
++</template>
++
++<style scoped>
++.mapa-trayecto {
++  display: grid;
++  gap: 0.55rem;
++}
++.mapa-toolbar {
++  display: grid;
++  gap: 0.5rem;
++}
++.mapa-actions {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.4rem;
++}
++.btn-map {
++  padding: 0.4rem 0.75rem;
++  border: none;
++  border-radius: 0.65rem;
++  background: var(--ride-green);
++  color: #fff;
++  font-size: 0.75rem;
++  font-weight: 700;
++  cursor: pointer;
++}
++.btn-map:disabled {
++  opacity: 0.65;
++  cursor: not-allowed;
++}
++.btn-map--ghost {
++  background: var(--color-background-soft);
++  color: var(--color-heading);
++  border: 1px solid var(--color-border);
++}
++.btn-map--ghost.is-on {
++  border-color: var(--ride-green);
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++}
++.mapa-canvas {
++  width: 100%;
++  border-radius: 12px;
++  overflow: hidden;
++  border: 1px solid var(--ride-green-border, #c5e4d6);
++  background: var(--ride-green-light);
++}
++.mapa-hint,
++.mapa-meta {
++  margin: 0;
++  font-size: 0.82rem;
++  color: var(--color-text);
++}
++.mapa-aviso {
++  margin: 0.25rem 0 0;
++  font-size: 0.8rem;
++  color: #b45309;
++}
++.mapa-fallback {
++  padding: 1rem;
++  border-radius: 12px;
++  background: color-mix(in srgb, #f59e0b 14%, var(--color-background));
++  border: 1px dashed #f0b27a;
++  color: color-mix(in srgb, #7a4a12 70%, var(--color-heading));
++  font-size: 0.9rem;
++}
++.mapa-footer {
++  display: grid;
++  gap: 0.2rem;
++}
++</style>
+diff --git a/src/components/ModalDialog.vue b/src/components/ModalDialog.vue
+new file mode 100644
+index 0000000..b9bc2a1
+--- /dev/null
++++ b/src/components/ModalDialog.vue
+@@ -0,0 +1,192 @@
++<script setup lang="ts">
++import { onMounted, onUnmounted, watch } from 'vue'
++
++const props = withDefaults(
++  defineProps<{
++    open: boolean
++    titulo: string
++    mensaje: string
++    /** cancel | danger | primary */
++    varianteConfirmar?: 'danger' | 'primary'
++    textoCancelar?: string
++    textoConfirmar?: string
++    /** If false, only shows the confirm/dismiss button (alert style). */
++    mostrarCancelar?: boolean
++    cargando?: boolean
++  }>(),
++  {
++    varianteConfirmar: 'primary',
++    textoCancelar: 'Cancelar',
++    textoConfirmar: 'Confirmar',
++    mostrarCancelar: true,
++    cargando: false,
++  },
++)
++
++const emit = defineEmits<{
++  cancelar: []
++  confirmar: []
++}>()
++
++function onKey(e: KeyboardEvent) {
++  if (!props.open) return
++  if (e.key === 'Escape') emit('cancelar')
++}
++
++onMounted(() => window.addEventListener('keydown', onKey))
++onUnmounted(() => window.removeEventListener('keydown', onKey))
++
++watch(
++  () => props.open,
++  (abierto) => {
++    document.body.style.overflow = abierto ? 'hidden' : ''
++  },
++)
++
++onUnmounted(() => {
++  document.body.style.overflow = ''
++})
++</script>
++
++<template>
++  <Teleport to="body">
++    <div
++      v-if="open"
++      class="modal-overlay"
++      role="presentation"
++      @click.self="emit('cancelar')"
++    >
++      <div
++        class="modal-panel"
++        role="alertdialog"
++        aria-modal="true"
++        :aria-labelledby="'modal-titulo'"
++        :aria-describedby="'modal-desc'"
++      >
++        <h3 id="modal-titulo">{{ titulo }}</h3>
++        <p id="modal-desc">{{ mensaje }}</p>
++        <slot />
++        <div class="modal-actions">
++          <button
++            v-if="mostrarCancelar"
++            type="button"
++            class="btn-sec"
++            :disabled="cargando"
++            @click="emit('cancelar')"
++          >
++            {{ textoCancelar }}
++          </button>
++          <button
++            type="button"
++            class="btn-pri"
++            :class="{
++              'btn-pri--danger': varianteConfirmar === 'danger',
++              'btn-pri--primary': varianteConfirmar === 'primary',
++            }"
++            :disabled="cargando"
++            @click="emit('confirmar')"
++          >
++            {{ cargando ? 'Espera…' : textoConfirmar }}
++          </button>
++        </div>
++      </div>
++    </div>
++  </Teleport>
++</template>
++
++<style scoped>
++.modal-overlay {
++  position: fixed;
++  inset: 0;
++  z-index: 1200;
++  display: flex;
++  align-items: center;
++  justify-content: center;
++  padding: 1rem;
++  background: color-mix(in srgb, #020617 55%, transparent);
++  backdrop-filter: blur(4px);
++}
++
++.modal-panel {
++  width: min(100%, 26rem);
++  padding: 1.35rem 1.4rem 1.25rem;
++  border-radius: 1.15rem;
++  border: 1px solid var(--color-border);
++  background: var(--color-background);
++  box-shadow:
++    0 20px 50px color-mix(in srgb, #000 35%, transparent),
++    0 0 0 1px color-mix(in srgb, var(--ride-green) 8%, transparent);
++  color: var(--color-text);
++}
++
++.modal-panel h3 {
++  margin: 0;
++  font-size: 1.15rem;
++  font-weight: 800;
++  letter-spacing: -0.02em;
++  color: var(--color-heading);
++}
++
++.modal-panel p {
++  margin: 0.65rem 0 0;
++  font-size: 0.9rem;
++  line-height: 1.5;
++  color: var(--color-text);
++}
++
++.modal-actions {
++  display: flex;
++  flex-wrap: wrap;
++  justify-content: flex-end;
++  gap: 0.55rem;
++  margin-top: 1.35rem;
++}
++
++.btn-sec,
++.btn-pri {
++  min-height: 2.4rem;
++  padding: 0.5rem 1rem;
++  border-radius: 0.8rem;
++  font-size: 0.82rem;
++  font-weight: 750;
++  font-family: inherit;
++  cursor: pointer;
++}
++
++.btn-sec {
++  border: 1px solid var(--color-border);
++  background: var(--color-background-soft);
++  color: var(--color-heading);
++}
++
++.btn-sec:hover:not(:disabled) {
++  background: var(--color-background-mute);
++}
++
++.btn-pri {
++  border: none;
++  color: #fff;
++}
++
++.btn-pri--primary {
++  background: var(--ride-green);
++}
++
++.btn-pri--primary:hover:not(:disabled) {
++  background: var(--ride-green-hover);
++}
++
++.btn-pri--danger {
++  background: #dc2626;
++}
++
++.btn-pri--danger:hover:not(:disabled) {
++  background: #b91c1c;
++}
++
++.btn-sec:disabled,
++.btn-pri:disabled {
++  opacity: 0.65;
++  cursor: not-allowed;
++}
++</style>
+diff --git a/src/components/TarjetaViaje.vue b/src/components/TarjetaViaje.vue
+index 910edb2..f500303 100644
+--- a/src/components/TarjetaViaje.vue
++++ b/src/components/TarjetaViaje.vue
+@@ -27,222 +27,264 @@ function formatFecha(f: string) {
+   })
+ }
+ 
+-const estadoClass: Record<string, string> = {
+-  disponible: 'badge--disponible',
+-  lleno: 'badge--lleno',
+-  'en curso': 'badge--en-curso',
+-  finalizado: 'badge--finalizado',
+-}
++const ultimoCupo = props.viaje.cuposDisponibles === 1 && props.viaje.estado === 'disponible'
+ </script>
+ 
+ <template>
+-  <article class="tarjeta-viaje">
+-    <div class="tarjeta-header">
+-      <div class="ruta">
+-        <span class="origen">{{ viaje.origen }}</span>
+-        <span class="flecha" aria-hidden="true">
+-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+-            <line x1="5" y1="12" x2="19" y2="12"/>
+-            <polyline points="12 5 19 12 12 19"/>
++  <article class="tarjeta" :class="{ 'tarjeta--urgente': ultimoCupo }">
++    <div class="tarjeta-top">
++      <div class="ruta-block">
++        <div class="ruta">
++          <span class="lugar">{{ viaje.origen }}</span>
++          <svg class="flecha" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++            <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
+           </svg>
++          <span class="lugar">{{ viaje.destino }}</span>
++        </div>
++        <p v-if="viaje.puntoEncuentro" class="encuentro">
++          Encuentro: {{ viaje.puntoEncuentro }}
++        </p>
++      </div>
++      <div class="status">
++        <span class="cupos" :class="{ 'cupos--urgente': ultimoCupo }">
++          <span class="cupos-dot" aria-hidden="true" />
++          {{
++            ultimoCupo
++              ? '¡Último cupo!'
++              : `${viaje.cuposDisponibles} cupo${viaje.cuposDisponibles === 1 ? '' : 's'}`
++          }}
+         </span>
+-        <span class="destino">{{ viaje.destino }}</span>
++        <span class="estado">{{ viaje.estado }}</span>
+       </div>
+-      <span :class="['badge', estadoClass[viaje.estado] ?? 'badge--disponible']">
+-        {{ viaje.estado }}
+-      </span>
+     </div>
+ 
+-    <div class="tarjeta-meta">
+-      <div class="meta-item">
+-        <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+-          <rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+-        </svg>
+-        <span>{{ formatFecha(viaje.fecha) }}</span>
++    <div class="meta-grid">
++      <div class="meta">
++        <span class="meta-label">Fecha</span>
++        <span class="meta-value">{{ formatFecha(viaje.fecha) }}</span>
+       </div>
+-      <div class="meta-item">
+-        <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+-          <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+-        </svg>
+-        <span>{{ formatHora(viaje.hora) }}</span>
++      <div class="meta">
++        <span class="meta-label">Salida</span>
++        <span class="meta-value meta-value--hora">{{ formatHora(viaje.hora) }}</span>
+       </div>
+-      <div class="meta-item">
+-        <svg class="meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+-          <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+-        </svg>
+-        <span>{{ viaje.cuposDisponibles }} cupo{{ viaje.cuposDisponibles !== 1 ? 's' : '' }}</span>
++      <div class="meta">
++        <span class="meta-label">Vehículo</span>
++        <span class="meta-value">{{ viaje.descripcionVehiculo || '—' }}</span>
+       </div>
+     </div>
+ 
+-    <div v-if="viaje.conductorNombre" class="tarjeta-conductor">
+-      <div class="avatar">{{ viaje.conductorNombre.charAt(0).toUpperCase() }}</div>
+-      <span>{{ viaje.conductorNombre }}</span>
++    <div class="tarjeta-mid">
++      <div v-if="viaje.conductorNombre" class="conductor">
++        <div class="avatar">{{ viaje.conductorNombre.charAt(0).toUpperCase() }}</div>
++        <div>
++          <p class="nombre">{{ viaje.conductorNombre }}</p>
++          <p class="rol">Conductor UJAP</p>
++        </div>
++      </div>
+     </div>
+ 
+-    <button
+-      type="button"
+-      class="btn-accion"
+-      :class="{ 'btn-accion--ver': props.soloVer }"
+-      @click="emit('unirse', viaje.id)"
+-    >
+-      {{ props.soloVer ? 'Ver detalle' : 'Ver viaje' }}
+-    </button>
++    <div class="tarjeta-foot">
++      <span class="nota">Comunidad institucional · no es taxi</span>
++      <button type="button" class="btn" :class="{ 'btn--urgente': ultimoCupo }" @click="emit('unirse', viaje.id)">
++        {{ props.soloVer ? 'Ver detalle' : 'Ver viaje y reservar' }}
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
++        </svg>
++      </button>
++    </div>
+   </article>
+ </template>
+ 
+ <style scoped>
+-.tarjeta-viaje {
++.tarjeta {
+   display: flex;
+   flex-direction: column;
+-  gap: 0.875rem;
+-  padding: 1.25rem;
++  gap: 0.85rem;
++  padding: 1.2rem;
+   border: 1px solid var(--color-border);
+-  border-radius: 12px;
++  border-radius: 1.15rem;
+   background: var(--color-background);
+-  transition: box-shadow 0.2s ease, transform 0.2s ease;
++  box-shadow: 0 4px 20px color-mix(in srgb, var(--color-heading) 4%, transparent);
++  transition:
++    box-shadow 0.2s ease,
++    transform 0.2s ease,
++    border-color 0.2s ease;
+ }
+-
+-.tarjeta-viaje:hover {
+-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+-  transform: translateY(-1px);
++.tarjeta:hover {
++  transform: translateY(-2px);
++  box-shadow: 0 12px 28px color-mix(in srgb, var(--ride-green) 10%, transparent);
++  border-color: var(--ride-green-border);
+ }
+-
+-/* Header: ruta + badge */
+-.tarjeta-header {
++.tarjeta--urgente {
++  border-color: color-mix(in srgb, #f59e0b 55%, var(--color-border));
++}
++.tarjeta-top {
+   display: flex;
+   align-items: flex-start;
+   justify-content: space-between;
+   gap: 0.75rem;
++  padding-bottom: 0.75rem;
++  border-bottom: 1px solid var(--color-border);
+ }
+-
+ .ruta {
+   display: flex;
+   align-items: center;
+-  gap: 0.35rem;
+   flex-wrap: wrap;
+-  min-width: 0;
+-}
+-
+-.origen, .destino {
+-  font-weight: 700;
+-  font-size: 0.95rem;
++  gap: 0.4rem;
++  font-size: 1rem;
++  font-weight: 850;
+   color: var(--color-heading);
+-  white-space: nowrap;
++}
++.lugar {
++  max-width: 12rem;
+   overflow: hidden;
+   text-overflow: ellipsis;
+-  max-width: 10rem;
++  white-space: nowrap;
+ }
+-
+ .flecha {
++  width: 1rem;
++  height: 1rem;
+   color: var(--ride-green-fg);
+   flex-shrink: 0;
+-  display: flex;
+-  align-items: center;
+ }
+-
+-/* Badge */
+-.badge {
+-  flex-shrink: 0;
+-  padding: 0.2rem 0.6rem;
+-  border-radius: 99px;
++.encuentro {
++  margin: 0.35rem 0 0;
+   font-size: 0.75rem;
+-  font-weight: 700;
+-  text-transform: capitalize;
+-  white-space: nowrap;
++  color: var(--color-text);
+ }
+-
+-.badge--disponible {
++.status {
++  display: flex;
++  flex-direction: column;
++  align-items: flex-end;
++  gap: 0.25rem;
++  flex-shrink: 0;
++}
++.cupos {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.35rem;
++  padding: 0.25rem 0.6rem;
++  border-radius: 999px;
+   background: var(--ride-green-light);
++  border: 1px solid var(--ride-green-border);
+   color: var(--ride-green-fg);
++  font-size: 0.72rem;
++  font-weight: 800;
+ }
+-.badge--lleno {
+-  background: var(--color-background-mute);
+-  color: var(--color-text);
++.cupos--urgente {
++  background: color-mix(in srgb, #f59e0b 16%, var(--color-background));
++  border-color: color-mix(in srgb, #f59e0b 40%, var(--color-border));
++  color: #b45309;
+ }
+-.badge--en-curso {
+-  background: var(--ride-green-light);
+-  color: var(--ride-green-fg);
++.cupos-dot {
++  width: 0.4rem;
++  height: 0.4rem;
++  border-radius: 999px;
++  background: currentColor;
+ }
+-.badge--finalizado {
+-  background: var(--color-background-mute);
++.estado {
++  font-size: 0.65rem;
++  font-weight: 650;
++  text-transform: capitalize;
+   color: var(--color-text);
+-  opacity: 0.8;
++  opacity: 0.75;
+ }
+-
+-/* Meta */
+-.tarjeta-meta {
+-  display: flex;
+-  flex-wrap: wrap;
+-  gap: 0.75rem;
++.meta-grid {
++  display: grid;
++  grid-template-columns: repeat(3, 1fr);
++  gap: 0.45rem;
++  padding: 0.7rem 0.65rem;
++  border-radius: 0.85rem;
++  background: var(--color-background-soft);
++  border: 1px solid var(--color-border);
+ }
+-
+-.meta-item {
+-  display: flex;
+-  align-items: center;
+-  gap: 0.3rem;
+-  font-size: 0.85rem;
++.meta-label {
++  display: block;
++  font-size: 0.62rem;
++  font-weight: 800;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
+   color: var(--color-text);
+-  opacity: 0.75;
++  opacity: 0.6;
+ }
+-
+-.meta-icon {
+-  width: 0.95rem;
+-  height: 0.95rem;
+-  flex-shrink: 0;
++.meta-value {
++  display: block;
++  margin-top: 0.15rem;
++  font-size: 0.78rem;
++  font-weight: 750;
++  color: var(--color-heading);
++  overflow: hidden;
++  text-overflow: ellipsis;
++  white-space: nowrap;
+ }
+-
+-/* Conductor */
+-.tarjeta-conductor {
++.meta-value--hora {
++  color: var(--ride-green-fg);
++}
++.conductor {
+   display: flex;
+   align-items: center;
+-  gap: 0.5rem;
+-  padding-top: 0.5rem;
+-  border-top: 1px solid var(--color-border);
+-  font-size: 0.875rem;
+-  color: var(--color-text);
++  gap: 0.55rem;
+ }
+-
+ .avatar {
+-  width: 1.75rem;
+-  height: 1.75rem;
+-  border-radius: 50%;
+-  background: var(--ride-green-light);
+-  color: var(--ride-green-fg);
++  width: 2.15rem;
++  height: 2.15rem;
++  border-radius: 999px;
++  display: grid;
++  place-items: center;
++  background: var(--ride-green);
++  color: #fff;
++  font-weight: 800;
++  font-size: 0.85rem;
++  box-shadow: 0 0 0 3px var(--ride-green-light);
++}
++.nombre {
++  margin: 0;
++  font-size: 0.82rem;
+   font-weight: 800;
+-  font-size: 0.8rem;
++  color: var(--color-heading);
++}
++.rol {
++  margin: 0.1rem 0 0;
++  font-size: 0.7rem;
++  color: var(--color-text);
++}
++.tarjeta-foot {
+   display: flex;
+   align-items: center;
+-  justify-content: center;
+-  flex-shrink: 0;
++  justify-content: space-between;
++  gap: 0.75rem;
++  padding-top: 0.75rem;
++  border-top: 1px solid var(--color-border);
+ }
+-
+-/* Botón */
+-.btn-accion {
+-  align-self: flex-start;
+-  padding: 0.5rem 1.1rem;
+-  border: 1.5px solid var(--ride-green);
+-  border-radius: 8px;
+-  background: transparent;
+-  color: var(--ride-green-fg);
+-  font-weight: 700;
+-  font-size: 0.875rem;
+-  cursor: pointer;
+-  transition: background 0.15s ease, color 0.15s ease;
++.nota {
++  font-size: 0.72rem;
++  color: var(--color-text);
+ }
+-
+-.btn-accion:hover {
++.btn {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.35rem;
++  padding: 0.55rem 0.9rem;
++  border: none;
++  border-radius: 0.75rem;
+   background: var(--ride-green);
+   color: #fff;
++  font-size: 0.75rem;
++  font-weight: 800;
++  cursor: pointer;
++  white-space: nowrap;
+ }
+-
+-.btn-accion--ver {
+-  border-color: var(--color-border);
+-  color: var(--color-text);
+-  opacity: 0.8;
++.btn svg {
++  width: 0.85rem;
++  height: 0.85rem;
+ }
+-
+-.btn-accion--ver:hover {
+-  background: var(--color-background-soft);
+-  color: var(--color-text);
++.btn:hover {
++  background: var(--ride-green-hover);
++}
++.btn--urgente {
++  background: #d97706;
++}
++.btn--urgente:hover {
++  background: #b45309;
+ }
+ </style>
+diff --git a/src/data/ejemplos.ts b/src/data/ejemplos.ts
+index cbaee52..751e8f8 100644
+--- a/src/data/ejemplos.ts
++++ b/src/data/ejemplos.ts
+@@ -14,8 +14,8 @@ export const usuariosEjemplo: Usuario[] = [conductorEjemplo]
+ export const viajesEjemplo: Viaje[] = [
+   {
+     id: 101,
+-    origen: 'San Diego',
+-    destino: 'Campus UJAP',
++    origen: 'San Diego, Carabobo, Venezuela',
++    destino: 'Universidad José Antonio Páez (Campus UJAP)',
+     puntoEncuentro: 'Plaza Bolívar',
+     fecha: '2026-08-18',
+     hora: '07:15',
+diff --git a/src/stores/viajes.ts b/src/stores/viajes.ts
+index c176005..98b8464 100644
+--- a/src/stores/viajes.ts
++++ b/src/stores/viajes.ts
+@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
+ import { useAuthStore } from '@/stores/auth'
+ import { viajesEjemplo } from '@/data/ejemplos'
+ import type { Viaje, FiltroViajes, NuevoViaje } from '@/types'
++import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
+ 
+ const SS_KEY = 'ride_mis_uniones'
+ 
+@@ -21,7 +22,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     sessionStorage.setItem(SS_KEY, JSON.stringify(misUniones.value))
+   }
+ 
+-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
++  const API_URL = String(import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim()
+ 
+   async function cargarViajes() {
+     cargando.value = true
+@@ -46,7 +47,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     try {
+       const res = await fetch(`${API_URL}/viajes`, {
+         method: 'POST',
+-        headers: { 'Content-Type': 'application/json', ...auth.authHeaders() },
++        headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
+         body: JSON.stringify(nuevoViaje),
+       })
+       if (!res.ok) throw new Error('Error al publicar el viaje')
+@@ -67,7 +68,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     try {
+       const res = await fetch(`${API_URL}/viajes/${id}/unirse`, {
+         method: 'POST',
+-        headers: auth.authHeaders(),
++        headers: await auth.authHeaders(),
+       })
+       const data = await res.json()
+       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al unirse al viaje' }
+@@ -88,7 +89,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     try {
+       const res = await fetch(`${API_URL}/viajes/${id}/unirse`, {
+         method: 'DELETE',
+-        headers: auth.authHeaders(),
++        headers: await auth.authHeaders(),
+       })
+       const data = await res.json()
+       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al abandonar el viaje' }
+@@ -113,7 +114,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     try {
+       const res = await fetch(`${API_URL}/viajes/${id}`, {
+         method: 'DELETE',
+-        headers: auth.authHeaders(),
++        headers: await auth.authHeaders(),
+       })
+       const data = await res.json()
+       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al eliminar el viaje' }
+@@ -131,7 +132,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     try {
+       const res = await fetch(`${API_URL}/viajes/${id}/hora`, {
+         method: 'PATCH',
+-        headers: { 'Content-Type': 'application/json', ...auth.authHeaders() },
++        headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
+         body: JSON.stringify({ hora }),
+       })
+       const data = await res.json()
+@@ -150,7 +151,7 @@ export const useViajesStore = defineStore('viajes', () => {
+     const auth = useAuthStore()
+     try {
+       const res = await fetch(`${API_URL}/viajes/${id}/pasajeros`, {
+-        headers: auth.authHeaders(),
++        headers: await auth.authHeaders(),
+       })
+       if (!res.ok) return []
+       return await res.json()
+@@ -161,11 +162,15 @@ export const useViajesStore = defineStore('viajes', () => {
+   }
+ 
+   const viajesFiltrados = computed(() => (filtro: FiltroViajes) => {
+-    return viajes.value.filter(v => {
+-      const origenOk = !filtro.origen || v.origen.toLowerCase().includes(filtro.origen.toLowerCase())
+-      const destinoOk = !filtro.destino || v.destino.toLowerCase().includes(filtro.destino.toLowerCase())
++    return viajes.value.filter((v) => {
++      const lugares = blobLugaresViaje(v)
++      // Zone chip OR free-text: match against origen, destino and encuentro so
++      // "San Diego" finds both San Diego→Campus and Campus→San Diego (or geocoded names).
++      const zonaOk = !filtro.zona || lugarCoincide(lugares, filtro.zona)
++      const origenOk = !filtro.origen || lugarCoincide(lugares, filtro.origen)
++      const destinoOk = !filtro.destino || lugarCoincide(lugares, filtro.destino)
+       const horaOk = !filtro.hora || v.hora.startsWith(filtro.hora)
+-      return origenOk && destinoOk && horaOk
++      return zonaOk && origenOk && destinoOk && horaOk
+     })
+   })
+ 
+diff --git a/src/utils/lugares.ts b/src/utils/lugares.ts
+new file mode 100644
+index 0000000..c4e980e
+--- /dev/null
++++ b/src/utils/lugares.ts
+@@ -0,0 +1,62 @@
++/** Normalize place text for consistent zone / filter matching (accents, case, spaces). */
++export function normalizarLugar(texto: string): string {
++  return texto
++    .normalize('NFD')
++    .replace(/\p{M}/gu, '')
++    .toLowerCase()
++    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
++    .replace(/\s+/g, ' ')
++    .trim()
++}
++
++/** Known campus / Valencia-area aliases so chips and free text stay aligned. */
++const ALIAS_POR_CLAVE: Record<string, string[]> = {
++  'san diego': ['san diego', 'el morro'],
++  naguanagua: ['naguanagua'],
++  'valencia centro': ['valencia centro', 'valencia', 'casco central'],
++  prebo: ['prebo'],
++  'el trigal': ['el trigal', 'trigal'],
++  'campus ujap': [
++    'campus ujap',
++    'campus',
++    'ujap',
++    'entrada ujap',
++    'universidad jose antonio paez',
++    'univ jose antonio paez',
++  ],
++  'los guayos': ['los guayos', 'guayos'],
++}
++
++function variantesConsulta(query: string): string[] {
++  const q = normalizarLugar(query)
++  if (!q) return []
++
++  const out = new Set<string>([q])
++  const exact = ALIAS_POR_CLAVE[q]
++  if (exact) exact.forEach((a) => out.add(a))
++
++  for (const [clave, aliases] of Object.entries(ALIAS_POR_CLAVE)) {
++    if (q.includes(clave) || clave.includes(q) || aliases.some((a) => a === q || q.includes(a))) {
++      out.add(clave)
++      aliases.forEach((a) => out.add(a))
++    }
++  }
++
++  return [...out]
++}
++
++/** True if `haystack` (any place field blob) matches the user/chip query. */
++export function lugarCoincide(haystack: string, query: string): boolean {
++  const texto = normalizarLugar(haystack)
++  if (!query.trim()) return true
++  if (!texto) return false
++  return variantesConsulta(query).some((v) => texto.includes(v))
++}
++
++export function blobLugaresViaje(viaje: {
++  origen: string
++  destino: string
++  puntoEncuentro?: string | null
++}): string {
++  return [viaje.origen, viaje.destino, viaje.puntoEncuentro ?? ''].filter(Boolean).join(' ')
++}
+diff --git a/src/views/DetalleViajeView.vue b/src/views/DetalleViajeView.vue
+index a5ef4c3..93a8bed 100644
+--- a/src/views/DetalleViajeView.vue
++++ b/src/views/DetalleViajeView.vue
+@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
+ import type { UsuarioPublico } from '@/types'
+ import TarjetaUsuario from '@/components/TarjetaUsuario.vue'
+ import EncabezadoRide from '@/components/EncabezadoRide.vue'
++import ModalDialog from '@/components/ModalDialog.vue'
++import MapaTrayecto from '@/components/MapaTrayecto.vue'
+ 
+ const route = useRoute()
+ const router = useRouter()
+@@ -27,6 +29,26 @@ const esConductorDelViaje = computed(
+ 
+ const yaUnido = computed(() => store.yaUnido(viajeId.value))
+ 
++const tieneMapa = computed(
++  () =>
++    viaje.value?.origenLat != null &&
++    viaje.value?.origenLng != null &&
++    viaje.value?.destinoLat != null &&
++    viaje.value?.destinoLng != null,
++)
++
++const origenMapa = computed(() =>
++  viaje.value?.origenLat != null && viaje.value?.origenLng != null
++    ? { lat: viaje.value.origenLat, lng: viaje.value.origenLng, label: viaje.value.origen }
++    : null,
++)
++
++const destinoMapa = computed(() =>
++  viaje.value?.destinoLat != null && viaje.value?.destinoLng != null
++    ? { lat: viaje.value.destinoLat, lng: viaje.value.destinoLng, label: viaje.value.destino }
++    : null,
++)
++
+ const fechaFormateada = computed(() => {
+   if (!viaje.value?.fecha) return ''
+   const [y, m, d] = viaje.value.fecha.split('-')
+@@ -148,6 +170,10 @@ watch(viaje, async (v) => {
+       <section class="panel-viaje" aria-labelledby="detalle-titulo">
+         <EncabezadoRide :titulo="`${viaje.origen} → ${viaje.destino}`" subtitulo="Detalle del viaje" />
+ 
++        <div v-if="tieneMapa" class="mapa-bloque">
++          <MapaTrayecto :origen="origenMapa" :destino="destinoMapa" height="240px" />
++        </div>
++
+         <dl class="info-lista">
+           <div v-if="viaje.puntoEncuentro" class="info-item">
+             <dt class="info-label">
+@@ -255,33 +281,32 @@ watch(viaje, async (v) => {
+     <p v-else class="cargando" role="status">Cargando viaje…</p>
+ 
+     <!-- Modal Confirmación Eliminar -->
+-    <div v-if="mostrarModalConfirmacion" class="modal-overlay" @click.self="cancelarEliminar">
+-      <div class="modal-content">
+-        <h3>Eliminar viaje</h3>
+-        <p>¿Estás seguro de que deseas eliminar este viaje? Esta acción no se puede deshacer y notificará a los pasajeros unidos.</p>
+-        <div class="modal-actions">
+-          <button type="button" class="btn-cancelar" @click="cancelarEliminar">Cancelar</button>
+-          <button type="button" class="btn-confirmar-eliminar" @click="confirmarEliminarViaje">Sí, eliminar</button>
+-        </div>
+-      </div>
+-    </div>
++    <ModalDialog
++      :open="mostrarModalConfirmacion"
++      titulo="Eliminar viaje"
++      mensaje="¿Estás seguro de que deseas eliminar este viaje? Esta acción no se puede deshacer y notificará a los pasajeros unidos."
++      variante-confirmar="danger"
++      texto-confirmar="Sí, eliminar"
++      texto-cancelar="Cancelar"
++      @cancelar="cancelarEliminar"
++      @confirmar="confirmarEliminarViaje"
++    />
+ 
+     <!-- Modal Editar Hora -->
+-    <div v-if="mostrarModalEditarHora" class="modal-overlay" @click.self="cancelarEditarHora">
+-      <div class="modal-content">
+-        <h3>Editar hora de salida</h3>
+-        <p>Selecciona el nuevo horario de salida para tu viaje.</p>
+-        
+-        <div style="margin-bottom: 1.5rem;">
+-          <input type="time" v-model="nuevaHora" class="input-hora-grande" />
+-        </div>
+-
+-        <div class="modal-actions">
+-          <button type="button" class="btn-cancelar" @click="cancelarEditarHora">Cancelar</button>
+-          <button type="button" class="btn-guardar" @click="confirmarEditarHora">Guardar hora</button>
+-        </div>
++    <ModalDialog
++      :open="mostrarModalEditarHora"
++      titulo="Editar hora de salida"
++      mensaje="Selecciona el nuevo horario de salida para tu viaje."
++      variante-confirmar="primary"
++      texto-confirmar="Guardar hora"
++      texto-cancelar="Cancelar"
++      @cancelar="cancelarEditarHora"
++      @confirmar="confirmarEditarHora"
++    >
++      <div class="hora-field">
++        <input v-model="nuevaHora" type="time" class="input-hora-grande" />
+       </div>
+-    </div>
++    </ModalDialog>
+   </main>
+ </template>
+ 
+@@ -320,6 +345,10 @@ watch(viaje, async (v) => {
+   gap: 1.5rem;
+ }
+ 
++.mapa-bloque {
++  margin-top: -0.5rem;
++}
++
+ .panel-titulo {
+   margin: 0 0 0.75rem;
+   font-size: 0.8rem;
+@@ -443,14 +472,8 @@ watch(viaje, async (v) => {
+   border-color: var(--ride-green);
+   box-shadow: 0 0 0 3px var(--ride-green-light);
+ }
+-.btn-guardar {
+-  padding: 0.5rem 1rem;
+-  border: none;
+-  border-radius: 6px;
+-  background: var(--ride-green);
+-  color: #fff;
+-  font-weight: 600;
+-  cursor: pointer;
++.hora-field {
++  margin-top: 0.85rem;
+ }
+ 
+ .aviso-info {
+@@ -529,70 +552,4 @@ watch(viaje, async (v) => {
+ }
+ 
+ .cargando { text-align: center; padding: 3rem; opacity: 0.5; }
+-
+-/* Modal styles */
+-.modal-overlay {
+-  position: fixed;
+-  top: 0;
+-  left: 0;
+-  right: 0;
+-  bottom: 0;
+-  background: rgba(0, 0, 0, 0.5);
+-  display: flex;
+-  align-items: center;
+-  justify-content: center;
+-  z-index: 1000;
+-}
+-
+-.modal-content {
+-  background: var(--color-background);
+-  padding: 1.5rem;
+-  border-radius: var(--ride-radius-lg);
+-  max-width: 400px;
+-  width: 90%;
+-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+-}
+-
+-.modal-content h3 {
+-  margin-top: 0;
+-  color: var(--color-heading);
+-  font-size: 1.25rem;
+-}
+-
+-.modal-content p {
+-  color: var(--color-text);
+-  margin-bottom: 1.5rem;
+-  font-size: 0.95rem;
+-  line-height: 1.5;
+-}
+-
+-.modal-actions {
+-  display: flex;
+-  justify-content: flex-end;
+-  gap: 0.75rem;
+-}
+-
+-.btn-cancelar {
+-  padding: 0.5rem 1rem;
+-  border: 1px solid var(--color-border);
+-  background: transparent;
+-  color: var(--color-text);
+-  border-radius: var(--ride-radius);
+-  cursor: pointer;
+-  font-weight: 600;
+-}
+-
+-.btn-confirmar-eliminar {
+-  padding: 0.5rem 1rem;
+-  border: none;
+-  background: #dc2626;
+-  color: #fff;
+-  border-radius: var(--ride-radius);
+-  cursor: pointer;
+-  font-weight: 600;
+-}
+-
+-.btn-confirmar-eliminar:hover {
+-  background: #b91c1c;
+-}
+ </style>
+diff --git a/src/views/LandingView.vue b/src/views/LandingView.vue
+index 2acb12e..d9a61e6 100644
+--- a/src/views/LandingView.vue
++++ b/src/views/LandingView.vue
+@@ -30,10 +30,11 @@ function buscarRuta() {
+   })
+ }
+ 
+-function buscarRutaDesde(origen: string) {
+-  busqueda.origen = origen
+-  busqueda.destino = 'Campus UJAP'
+-  buscarRuta()
++function buscarRutaDesde(zona: string) {
++  router.push({
++    path: '/viajes',
++    query: { zona },
++  })
+ }
+ 
+ const pasos = [
+@@ -59,7 +60,7 @@ const pasos = [
+     n: '4',
+     nombre: 'encuentro' as const,
+     titulo: 'Viajan juntos',
+-    texto: 'Aporte para gasolina, no tarifa de taxi.',
++    texto: 'Coordinan el punto de encuentro y salen juntos.',
+   },
+ ]
+ 
+@@ -109,7 +110,7 @@ const beneficios = [
+             </li>
+             <li>
+               <IconoRide nombre="ahorro" />
+-              Aporte a gasolina
++              Sin cobros en la app
+             </li>
+             <li>
+               <IconoRide nombre="campus" />
+@@ -195,7 +196,7 @@ const beneficios = [
+             <article class="role-card">
+               <span class="paso-icon" aria-hidden="true"><IconoRide nombre="volante" /></span>
+               <h3>Conductor</h3>
+-              <p>Publica hora y cupos. El aporte cubre gasolina, no es un negocio.</p>
++              <p>Publica hora y cupos. No cobramos: es carpooling entre compañeros de campus.</p>
+               <RouterLink to="/publicar" class="role-link">Publicar ruta →</RouterLink>
+             </article>
+             <article class="role-card">
+diff --git a/src/views/MisViajesView.vue b/src/views/MisViajesView.vue
+index 6664345..1fe2b67 100644
+--- a/src/views/MisViajesView.vue
++++ b/src/views/MisViajesView.vue
+@@ -1,98 +1,1243 @@
+ <script setup lang="ts">
+-import { computed, onMounted } from 'vue'
++import { computed, onMounted, reactive, ref, watch } from 'vue'
+ import { useRouter } from 'vue-router'
+ import { useViajesStore } from '@/stores/viajes'
+ import { useAuthStore } from '@/stores/auth'
+-import EncabezadoRide from '@/components/EncabezadoRide.vue'
+-import TarjetaViaje from '@/components/TarjetaViaje.vue'
+ import EstadoVacio from '@/components/EstadoVacio.vue'
++import ModalDialog from '@/components/ModalDialog.vue'
++import type { UsuarioPublico, Viaje } from '@/types'
++import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
++
++type TabMisViajes = 'activos' | 'completados' | 'cancelados'
+ 
+ const store = useViajesStore()
+ const auth = useAuthStore()
+ const router = useRouter()
+ 
+-const misViajes = computed(() => (auth.usuario ? store.viajesDelUsuario(auth.usuario.id) : []))
++const tab = ref<TabMisViajes>('activos')
++const busqueda = ref('')
++const eliminandoId = ref<number | null>(null)
++const pasajerosPorViaje = reactive<Record<number, UsuarioPublico[]>>({})
++const cargandoPasajeros = ref(false)
++
++const modalEliminar = ref(false)
++const viajeAEliminar = ref<number | null>(null)
++const modalAviso = ref(false)
++const avisoTitulo = ref('')
++const avisoMensaje = ref('')
++
++const misViajes = computed(() =>
++  auth.usuario ? store.viajesDelUsuario(auth.usuario.id) : [],
++)
++
++function hoyIso(): string {
++  const d = new Date()
++  const y = d.getFullYear()
++  const m = String(d.getMonth() + 1).padStart(2, '0')
++  const day = String(d.getDate()).padStart(2, '0')
++  return `${y}-${m}-${day}`
++}
++
++function esActivo(v: Viaje): boolean {
++  if (v.estado === 'cancelado') return false
++  if (v.estado === 'completado') return false
++  return v.fecha >= hoyIso()
++}
++
++function esCompletado(v: Viaje): boolean {
++  if (v.estado === 'cancelado') return false
++  if (v.estado === 'completado') return true
++  return v.fecha < hoyIso()
++}
++
++function esCancelado(v: Viaje): boolean {
++  return v.estado === 'cancelado'
++}
++
++const contadores = computed(() => ({
++  activos: misViajes.value.filter(esActivo).length,
++  completados: misViajes.value.filter(esCompletado).length,
++  cancelados: misViajes.value.filter(esCancelado).length,
++}))
++
++const viajesTab = computed(() => {
++  const base =
++    tab.value === 'activos'
++      ? misViajes.value.filter(esActivo)
++      : tab.value === 'completados'
++        ? misViajes.value.filter(esCompletado)
++        : misViajes.value.filter(esCancelado)
++
++  const q = busqueda.value.trim()
++  if (!q) return base
++  return base.filter(
++    (v) =>
++      lugarCoincide(blobLugaresViaje(v), q) ||
++      lugarCoincide(v.descripcionVehiculo, q) ||
++      String(v.id).includes(q),
++  )
++})
++
++const metricas = computed(() => {
++  const activos = misViajes.value.filter(esActivo)
++  const cuposLibres = activos.reduce((s, v) => s + v.cuposDisponibles, 0)
++  const cuposOcupados = activos.reduce((s, v) => s + (v.cuposTotal - v.cuposDisponibles), 0)
++  const cuposTotal = activos.reduce((s, v) => s + v.cuposTotal, 0)
++  const deHoy = activos.filter((v) => v.fecha === hoyIso()).length
++  return {
++    activos: activos.length,
++    deHoy,
++    pasajeros: cuposOcupados,
++    cuposLibres,
++    cuposTotal,
++  }
++})
++
++function formatHora(h: string) {
++  const [hh, mm] = h.split(':')
++  const hora = parseInt(hh ?? '0', 10)
++  const ampm = hora >= 12 ? 'PM' : 'AM'
++  const hora12 = hora % 12 || 12
++  return `${hora12}:${mm ?? '00'} ${ampm}`
++}
++
++function formatFecha(f: string) {
++  const [y, m, d] = f.split('-')
++  return new Date(Number(y), Number(m) - 1, Number(d)).toLocaleDateString('es-VE', {
++    weekday: 'short',
++    day: 'numeric',
++    month: 'long',
++  })
++}
++
++function etiquetaEstado(v: Viaje) {
++  if (v.estado === 'lleno' || v.cuposDisponibles === 0) return 'Lleno'
++  if (v.estado === 'disponible') {
++    return `Disponible (${v.cuposDisponibles} cupo${v.cuposDisponibles === 1 ? '' : 's'} libre${v.cuposDisponibles === 1 ? '' : 's'})`
++  }
++  return v.estado
++}
++
++function pctOcupacion(v: Viaje) {
++  if (!v.cuposTotal) return 0
++  return Math.round(((v.cuposTotal - v.cuposDisponibles) / v.cuposTotal) * 100)
++}
+ 
+-// En mis viajes el botón "Ver detalle" navega al detalle — no "Unirme"
+-function handleVerDetalle(id: number) {
++function iniciales(nombre: string) {
++  return nombre
++    .split(/\s+/)
++    .filter(Boolean)
++    .slice(0, 2)
++    .map((p) => p[0]?.toUpperCase() ?? '')
++    .join('')
++}
++
++async function cargarPasajerosActivos() {
++  if (!auth.usuario) return
++  const ids = misViajes.value.filter(esActivo).map((v) => v.id)
++  if (ids.length === 0) return
++  cargandoPasajeros.value = true
++  try {
++    await Promise.all(
++      ids.map(async (id) => {
++        pasajerosPorViaje[id] = await store.obtenerPasajeros(id)
++      }),
++    )
++  } finally {
++    cargandoPasajeros.value = false
++  }
++}
++
++function mostrarAviso(titulo: string, mensaje: string) {
++  avisoTitulo.value = titulo
++  avisoMensaje.value = mensaje
++  modalAviso.value = true
++}
++
++function pedirCancelarViaje(id: number) {
++  viajeAEliminar.value = id
++  modalEliminar.value = true
++}
++
++function cerrarModalEliminar() {
++  if (eliminandoId.value !== null) return
++  modalEliminar.value = false
++  viajeAEliminar.value = null
++}
++
++async function confirmarCancelarViaje() {
++  const id = viajeAEliminar.value
++  if (id == null) return
++  eliminandoId.value = id
++  try {
++    const r = await store.eliminarViaje(id)
++    if (!r.ok) {
++      modalEliminar.value = false
++      viajeAEliminar.value = null
++      mostrarAviso('No se pudo cancelar', r.mensaje)
++    } else {
++      delete pasajerosPorViaje[id]
++      modalEliminar.value = false
++      viajeAEliminar.value = null
++    }
++  } finally {
++    eliminandoId.value = null
++  }
++}
++
++function irDetalle(id: number) {
+   router.push(`/viajes/${id}`)
+ }
+ 
+ onMounted(async () => {
+   if (store.viajes.length === 0) await store.cargarViajes()
++  await cargarPasajerosActivos()
+ })
++
++watch(
++  () => misViajes.value.map((v) => v.id).join(','),
++  () => {
++    void cargarPasajerosActivos()
++  },
++)
+ </script>
+ 
+ <template>
+-  <main class="mis-viajes-view page-content">
+-    <EncabezadoRide
+-      titulo="Mis viajes"
+-      :subtitulo="auth.usuario ? `Viajes publicados por ${auth.usuario.nombre}` : 'Mis viajes'"
+-    />
++  <main class="mis-viajes page-content">
++    <nav class="crumb" aria-label="Ruta">
++      <RouterLink to="/inicio">Inicio</RouterLink>
++      <span>/</span>
++      <span class="crumb-muted">Mis viajes</span>
++      <span>/</span>
++      <span class="crumb-on">Gestión de rutas</span>
++    </nav>
+ 
+-    <section class="seccion-viajes" aria-label="Mis viajes publicados">
+-      <div v-if="misViajes.length > 0" class="lista-viajes">
+-        <TarjetaViaje
+-          v-for="viaje in misViajes"
+-          :key="viaje.id"
+-          :viaje="viaje"
+-          :solo-ver="true"
+-          @unirse="handleVerDetalle"
+-        />
++    <header class="hero">
++      <div class="hero-copy">
++        <h1>Mis viajes</h1>
++        <p>
++          Administra las rutas que publicaste como conductor, consulta quién se unió y revisa el
++          estado de tus trayectos hacia o desde el campus UJAP.
++        </p>
+       </div>
++      <RouterLink
++        v-if="auth.puedePublicar"
++        to="/publicar"
++        class="btn-publicar"
++      >
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
++        </svg>
++        Publicar nuevo viaje
++      </RouterLink>
++    </header>
++
++    <section class="metrics" aria-label="Resumen de actividad">
++      <article class="metric">
++        <div class="metric-icon metric-icon--green" aria-hidden="true">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++            <path
++              stroke-linecap="round"
++              stroke-linejoin="round"
++              d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"
++            />
++          </svg>
++        </div>
++        <div>
++          <span class="metric-label">Viajes activos</span>
++          <div class="metric-row">
++            <span class="metric-value">{{ metricas.activos }}</span>
++            <span v-if="metricas.deHoy" class="metric-hint metric-hint--ok"
++              >{{ metricas.deHoy }} hoy</span
++            >
++          </div>
++        </div>
++      </article>
++
++      <article class="metric">
++        <div class="metric-icon metric-icon--blue" aria-hidden="true">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++            <path
++              stroke-linecap="round"
++              stroke-linejoin="round"
++              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"
++            />
++          </svg>
++        </div>
++        <div>
++          <span class="metric-label">Pasajeros en activos</span>
++          <div class="metric-row">
++            <span class="metric-value">{{ metricas.pasajeros }}</span>
++            <span class="metric-hint"
++              >de {{ metricas.cuposTotal || 0 }} cupos</span
++            >
++          </div>
++        </div>
++      </article>
++
++      <article class="metric">
++        <div class="metric-icon metric-icon--amber" aria-hidden="true">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++            <path
++              stroke-linecap="round"
++              stroke-linejoin="round"
++              d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
++            />
++          </svg>
++        </div>
++        <div>
++          <span class="metric-label">Cupos libres</span>
++          <div class="metric-row">
++            <span class="metric-value">{{ metricas.cuposLibres }}</span>
++            <span class="metric-hint">en rutas próximas</span>
++          </div>
++        </div>
++      </article>
+ 
++      <article class="metric">
++        <div class="metric-icon metric-icon--slate" aria-hidden="true">
++          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++            <path
++              stroke-linecap="round"
++              stroke-linejoin="round"
++              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
++            />
++          </svg>
++        </div>
++        <div>
++          <span class="metric-label">Completados</span>
++          <div class="metric-row">
++            <span class="metric-value">{{ contadores.completados }}</span>
++            <span class="metric-hint">historial</span>
++          </div>
++        </div>
++      </article>
++    </section>
++
++    <div class="toolbar">
++      <div class="tabs" role="tablist" aria-label="Estado de viajes">
++        <button
++          type="button"
++          role="tab"
++          class="tab"
++          :class="{ 'is-on': tab === 'activos' }"
++          :aria-selected="tab === 'activos'"
++          @click="tab = 'activos'"
++        >
++          Próximos / Activos
++          <span class="tab-count">{{ contadores.activos }}</span>
++        </button>
++        <button
++          type="button"
++          role="tab"
++          class="tab"
++          :class="{ 'is-on': tab === 'completados' }"
++          :aria-selected="tab === 'completados'"
++          @click="tab = 'completados'"
++        >
++          Completados
++          <span class="tab-count">{{ contadores.completados }}</span>
++        </button>
++        <button
++          type="button"
++          role="tab"
++          class="tab"
++          :class="{ 'is-on': tab === 'cancelados' }"
++          :aria-selected="tab === 'cancelados'"
++          @click="tab = 'cancelados'"
++        >
++          Cancelados
++          <span class="tab-count">{{ contadores.cancelados }}</span>
++        </button>
++      </div>
++
++      <label class="search">
++        <span class="sr-only">Filtrar mis viajes</span>
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
++          <path
++            stroke-linecap="round"
++            stroke-linejoin="round"
++            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
++          />
++        </svg>
++        <input v-model="busqueda" type="search" placeholder="Filtrar por destino, zona o fecha…" />
++        <button
++          v-if="busqueda"
++          type="button"
++          class="search-clear"
++          @click="busqueda = ''"
++        >
++          Quitar
++        </button>
++      </label>
++    </div>
++
++    <section class="lista" aria-label="Lista de mis viajes">
+       <EstadoVacio
+-        v-else
++        v-if="misViajes.length === 0"
+         titulo="Todavía no publicas una ruta"
+         mensaje="Cuando vayas en carro al campus, publica origen, hora y cupos. Alguien de la UJAP puede ocupar el asiento vacío."
+       />
+ 
+-      <div class="acciones">
++      <EstadoVacio
++        v-else-if="viajesTab.length === 0"
++        titulo="Nada en esta vista"
++        :mensaje="
++          busqueda
++            ? 'Ningún viaje coincide con el filtro. Quítalo o prueba otra zona.'
++            : 'No hay viajes en esta pestaña todavía.'
++        "
++      />
++
++      <template v-else>
++        <article
++          v-for="viaje in viajesTab"
++          :key="viaje.id"
++          class="card"
++          :class="{ 'card--muted': tab !== 'activos' }"
++        >
++          <div class="card-top">
++            <div>
++              <div class="badges">
++                <span v-if="esActivo(viaje)" class="badge badge--live">
++                  <span class="dot" aria-hidden="true" />
++                  Ruta activa publicada
++                </span>
++                <span v-else-if="esCompletado(viaje)" class="badge">Completado</span>
++                <span v-else class="badge badge--warn">Cancelado</span>
++                <span class="id-viaje">ID #{{ viaje.id }}</span>
++              </div>
++              <h2 class="ruta">
++                <span>{{ viaje.origen }}</span>
++                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++                  <path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" />
++                </svg>
++                <span>{{ viaje.destino }}</span>
++              </h2>
++            </div>
++            <span class="status-pill">{{ etiquetaEstado(viaje) }}</span>
++          </div>
++
++          <div class="card-body">
++            <div class="col">
++              <span class="col-label">Horario de salida</span>
++              <p class="col-strong">{{ formatFecha(viaje.fecha) }}</p>
++              <p class="col-soft">{{ formatHora(viaje.hora) }}</p>
++            </div>
++            <div class="col">
++              <span class="col-label">Punto de encuentro</span>
++              <p class="col-strong">{{ viaje.puntoEncuentro || 'Por coordinar' }}</p>
++            </div>
++            <div class="col">
++              <span class="col-label">Vehículo</span>
++              <p class="col-strong">{{ viaje.descripcionVehiculo || '—' }}</p>
++            </div>
++            <div class="ocupacion">
++              <div class="ocupacion-row">
++                <span>Cupos ocupados</span>
++                <strong>{{ viaje.cuposTotal - viaje.cuposDisponibles }} / {{ viaje.cuposTotal }}</strong>
++              </div>
++              <div class="bar" aria-hidden="true">
++                <div class="bar-fill" :style="{ width: `${pctOcupacion(viaje)}%` }" />
++              </div>
++              <p class="ocupacion-hint">{{ viaje.cuposDisponibles }} libres</p>
++            </div>
++          </div>
++
++          <div v-if="esActivo(viaje)" class="pasajeros">
++            <div class="pasajeros-head">
++              <h3>
++                Pasajeros unidos
++                <template v-if="pasajerosPorViaje[viaje.id]">
++                  ({{ pasajerosPorViaje[viaje.id]?.length ?? 0 }})
++                </template>
++              </h3>
++              <span class="pasajeros-hint"
++                >Quedan {{ viaje.cuposDisponibles }} puesto{{ viaje.cuposDisponibles === 1 ? '' : 's' }}</span
++              >
++            </div>
++
++            <p v-if="cargandoPasajeros && !pasajerosPorViaje[viaje.id]" class="pasajeros-empty">
++              Cargando pasajeros…
++            </p>
++            <p
++              v-else-if="!(pasajerosPorViaje[viaje.id]?.length)"
++              class="pasajeros-empty"
++            >
++              Aún no hay estudiantes unidos a esta ruta.
++            </p>
++            <ul v-else class="pasajeros-lista">
++              <li v-for="p in pasajerosPorViaje[viaje.id]" :key="p.id">
++                <div class="avatar">{{ iniciales(p.nombre) }}</div>
++                <div>
++                  <p class="p-nombre">{{ p.nombre }}</p>
++                  <p class="p-meta">{{ p.correo }}</p>
++                </div>
++              </li>
++            </ul>
++          </div>
++
++          <div class="card-foot">
++            <p class="foot-note">Comunidad institucional · sin cobros en RideUJAP</p>
++            <div class="foot-actions">
++              <button
++                v-if="esActivo(viaje)"
++                type="button"
++                class="btn-ghost btn-danger"
++                :disabled="eliminandoId === viaje.id"
++                @click="pedirCancelarViaje(viaje.id)"
++              >
++                {{ eliminandoId === viaje.id ? 'Eliminando…' : 'Cancelar viaje' }}
++              </button>
++              <button type="button" class="btn-ghost" @click="irDetalle(viaje.id)">
++                {{ esActivo(viaje) ? 'Gestionar viaje' : 'Ver detalle' }}
++              </button>
++              <button
++                v-if="esActivo(viaje)"
++                type="button"
++                class="btn-primary"
++                @click="irDetalle(viaje.id)"
++              >
++                Ver abordaje
++                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
++                </svg>
++              </button>
++              <RouterLink
++                v-else-if="auth.puedePublicar && esCompletado(viaje)"
++                to="/publicar"
++                class="btn-primary btn-link"
++              >
++                Republicar ruta
++              </RouterLink>
++            </div>
++          </div>
++        </article>
++      </template>
++
++      <div v-if="misViajes.length === 0 && auth.puedePublicar" class="acciones-empty">
+         <RouterLink to="/publicar" class="btn-publicar">+ Publicar nuevo viaje</RouterLink>
+       </div>
+     </section>
++
++    <aside class="protocolo" aria-label="Normas de seguridad">
++      <div class="protocolo-icon" aria-hidden="true">
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++          <path
++            stroke-linecap="round"
++            stroke-linejoin="round"
++            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
++          />
++        </svg>
++      </div>
++      <div class="protocolo-copy">
++        <h2>
++          Abordaje seguro en campus
++          <span class="pill-req">Recomendado</span>
++        </h2>
++        <p>
++          Confirma identidad con el correo institucional y el punto de encuentro publicado. RideUJAP
++          no procesa pagos: el viaje es colaboración entre compañeros UJAP.
++        </p>
++      </div>
++      <RouterLink to="/viajes" class="protocolo-btn">Ver viajes disponibles</RouterLink>
++    </aside>
++
++    <ModalDialog
++      :open="modalEliminar"
++      titulo="Cancelar viaje"
++      mensaje="¿Eliminar esta ruta publicada? La acción no se puede deshacer y se avisará a los pasajeros unidos."
++      variante-confirmar="danger"
++      texto-confirmar="Sí, cancelar viaje"
++      texto-cancelar="Mantener viaje"
++      :cargando="eliminandoId !== null"
++      @cancelar="cerrarModalEliminar"
++      @confirmar="confirmarCancelarViaje"
++    />
++
++    <ModalDialog
++      :open="modalAviso"
++      :titulo="avisoTitulo"
++      :mensaje="avisoMensaje"
++      :mostrar-cancelar="false"
++      texto-confirmar="Entendido"
++      @cancelar="modalAviso = false"
++      @confirmar="modalAviso = false"
++    />
+   </main>
+ </template>
+ 
+ <style scoped>
+-.mis-viajes-view {
++.sr-only {
++  position: absolute;
++  width: 1px;
++  height: 1px;
++  padding: 0;
++  margin: -1px;
++  overflow: hidden;
++  clip: rect(0, 0, 0, 0);
++  border: 0;
++}
++
++.mis-viajes {
+   width: 100%;
+ }
+ 
+-.seccion-viajes {
+-  margin-top: 1.5rem;
++.crumb {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.4rem;
++  margin-bottom: 0.85rem;
++  font-size: 0.75rem;
++  color: var(--color-text);
++  opacity: 0.75;
++}
++.crumb a {
++  color: inherit;
++  text-decoration: none;
++}
++.crumb a:hover {
++  color: var(--ride-green-fg);
++}
++.crumb-on {
++  color: var(--ride-green-fg);
++  font-weight: 650;
++  opacity: 1;
++}
++
++.hero {
++  display: flex;
++  flex-direction: column;
++  gap: 1rem;
++  padding-bottom: 1.35rem;
++  border-bottom: 1px solid var(--color-border);
++}
++@media (min-width: 768px) {
++  .hero {
++    flex-direction: row;
++    align-items: flex-end;
++    justify-content: space-between;
++  }
++}
++.hero h1 {
++  margin: 0;
++  font-size: clamp(1.65rem, 3vw, 2rem);
++  font-weight: 850;
++  letter-spacing: -0.03em;
++  color: var(--color-heading);
++}
++.hero p {
++  margin: 0.45rem 0 0;
++  max-width: 38rem;
++  font-size: 0.92rem;
++  line-height: 1.5;
++  color: var(--color-text);
++}
++
++.btn-publicar {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 0.45rem;
++  padding: 0.75rem 1.15rem;
++  border-radius: 1rem;
++  background: var(--ride-green);
++  color: #fff;
++  font-weight: 750;
++  font-size: 0.88rem;
++  text-decoration: none;
++  box-shadow: 0 4px 14px color-mix(in srgb, var(--ride-green) 28%, transparent);
++}
++.btn-publicar svg {
++  width: 1rem;
++  height: 1rem;
++}
++.btn-publicar:hover {
++  background: var(--ride-green-hover);
+ }
+ 
+-.lista-viajes {
++.metrics {
+   display: grid;
++  gap: 0.85rem;
+   grid-template-columns: 1fr;
+-  gap: var(--ride-gap);
+-  margin-bottom: 1.5rem;
++  margin-top: 1.35rem;
++}
++@media (min-width: 640px) {
++  .metrics {
++    grid-template-columns: 1fr 1fr;
++  }
++}
++@media (min-width: 1024px) {
++  .metrics {
++    grid-template-columns: repeat(4, 1fr);
++  }
++}
++.metric {
++  display: flex;
++  align-items: center;
++  gap: 0.9rem;
++  padding: 1rem;
++  border: 1px solid var(--color-border);
++  border-radius: 1.1rem;
++  background: var(--color-background);
++}
++.metric-icon {
++  width: 2.75rem;
++  height: 2.75rem;
++  border-radius: 0.85rem;
++  display: grid;
++  place-items: center;
++  flex-shrink: 0;
++}
++.metric-icon svg {
++  width: 1.25rem;
++  height: 1.25rem;
++}
++.metric-icon--green {
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++  border: 1px solid var(--ride-green-border);
++}
++.metric-icon--blue {
++  background: color-mix(in srgb, #3b82f6 12%, var(--color-background));
++  color: #2563eb;
++  border: 1px solid color-mix(in srgb, #3b82f6 25%, var(--color-border));
++}
++.metric-icon--amber {
++  background: color-mix(in srgb, #d97706 12%, var(--color-background));
++  color: #b45309;
++  border: 1px solid color-mix(in srgb, #d97706 25%, var(--color-border));
++}
++.metric-icon--slate {
++  background: var(--color-background-soft);
++  color: var(--color-heading);
++  border: 1px solid var(--color-border);
++}
++.metric-label {
++  display: block;
++  font-size: 0.65rem;
++  font-weight: 800;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
++  color: var(--color-text);
++  opacity: 0.65;
++}
++.metric-row {
++  display: flex;
++  align-items: baseline;
++  gap: 0.45rem;
++  margin-top: 0.15rem;
++}
++.metric-value {
++  font-size: 1.55rem;
++  font-weight: 800;
++  color: var(--color-heading);
++  letter-spacing: -0.03em;
++}
++.metric-hint {
++  font-size: 0.72rem;
++  color: var(--color-text);
++}
++.metric-hint--ok {
++  color: var(--ride-green-fg);
++  font-weight: 700;
++}
++
++.toolbar {
++  display: flex;
++  flex-direction: column;
++  gap: 0.85rem;
++  margin-top: 1.6rem;
++  margin-bottom: 1rem;
++}
++@media (min-width: 900px) {
++  .toolbar {
++    flex-direction: row;
++    align-items: center;
++    justify-content: space-between;
++  }
++}
++.tabs {
++  display: inline-flex;
++  flex-wrap: wrap;
++  gap: 0.25rem;
++  padding: 0.3rem;
++  border-radius: 0.9rem;
++  background: var(--color-background-mute);
++}
++.tab {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.4rem;
++  padding: 0.5rem 0.85rem;
++  border: none;
++  border-radius: 0.7rem;
++  background: transparent;
++  color: var(--color-text);
++  font-size: 0.75rem;
++  font-weight: 650;
++  font-family: inherit;
++  cursor: pointer;
++}
++.tab.is-on {
++  background: var(--color-background);
++  color: var(--color-heading);
++  font-weight: 800;
++  box-shadow: 0 1px 4px color-mix(in srgb, var(--color-heading) 8%, transparent);
++}
++.tab-count {
++  min-width: 1.25rem;
++  height: 1.25rem;
++  padding: 0 0.3rem;
++  border-radius: 999px;
++  display: inline-grid;
++  place-items: center;
++  font-size: 0.65rem;
++  font-weight: 800;
++  background: color-mix(in srgb, var(--color-heading) 10%, transparent);
++}
++.tab.is-on .tab-count {
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++}
++
++.search {
++  position: relative;
++  display: flex;
++  align-items: center;
++  width: 100%;
++  max-width: 22rem;
++}
++.search svg {
++  position: absolute;
++  left: 0.75rem;
++  width: 1rem;
++  height: 1rem;
++  color: var(--color-text);
++  opacity: 0.55;
++  pointer-events: none;
++}
++.search input {
++  width: 100%;
++  min-height: 2.45rem;
++  padding: 0.5rem 4.2rem 0.5rem 2.35rem;
++  border: 1px solid var(--color-border);
++  border-radius: 0.85rem;
++  background: var(--color-background);
++  color: var(--color-heading);
++  font-size: 0.8rem;
++  font-family: inherit;
++}
++.search input:focus {
++  outline: none;
++  border-color: var(--ride-green);
++  box-shadow: 0 0 0 3px var(--ride-green-light);
++}
++.search-clear {
++  position: absolute;
++  right: 0.45rem;
++  border: none;
++  background: none;
++  color: var(--ride-green-fg);
++  font-size: 0.72rem;
++  font-weight: 750;
++  cursor: pointer;
++  font-family: inherit;
++}
++
++.lista {
++  display: flex;
++  flex-direction: column;
++  gap: 1.1rem;
++}
++
++.card {
++  border: 1px solid var(--color-border);
++  border-radius: 1.35rem;
++  background: var(--color-background);
++  overflow: hidden;
++  box-shadow: 0 4px 18px color-mix(in srgb, var(--color-heading) 4%, transparent);
++}
++.card--muted {
++  opacity: 0.9;
++}
++.card-top {
++  display: flex;
++  flex-direction: column;
++  gap: 0.85rem;
++  padding: 1.25rem 1.25rem 1rem;
++  border-bottom: 1px solid var(--color-border);
++  background: linear-gradient(
++    90deg,
++    var(--color-background),
++    color-mix(in srgb, var(--ride-green) 6%, var(--color-background))
++  );
++}
++@media (min-width: 768px) {
++  .card-top {
++    flex-direction: row;
++    align-items: flex-start;
++    justify-content: space-between;
++  }
++}
++.badges {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.45rem;
++  margin-bottom: 0.55rem;
++}
++.badge {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.35rem;
++  padding: 0.25rem 0.65rem;
++  border-radius: 999px;
++  font-size: 0.68rem;
++  font-weight: 750;
++  background: var(--color-background-soft);
++  color: var(--color-text);
++  border: 1px solid var(--color-border);
++}
++.badge--live {
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++  border-color: var(--ride-green-border);
++}
++.badge--warn {
++  background: color-mix(in srgb, #e11d48 10%, var(--color-background));
++  color: #be123c;
++  border-color: color-mix(in srgb, #e11d48 25%, var(--color-border));
++}
++.dot {
++  width: 0.45rem;
++  height: 0.45rem;
++  border-radius: 999px;
++  background: var(--ride-green);
++}
++.id-viaje {
++  font-size: 0.72rem;
++  color: var(--color-text);
++  opacity: 0.65;
++}
++.ruta {
++  margin: 0;
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.45rem;
++  font-size: clamp(1.05rem, 2.2vw, 1.35rem);
++  font-weight: 800;
++  letter-spacing: -0.02em;
++  color: var(--color-heading);
++  line-height: 1.25;
++}
++.ruta svg {
++  width: 1.1rem;
++  height: 1.1rem;
++  color: var(--ride-green-fg);
++  flex-shrink: 0;
++}
++.status-pill {
++  align-self: flex-start;
++  padding: 0.4rem 0.75rem;
++  border-radius: 999px;
++  font-size: 0.72rem;
++  font-weight: 750;
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++  border: 1px solid var(--ride-green-border);
++  white-space: nowrap;
+ }
+ 
++.card-body {
++  display: grid;
++  gap: 1rem;
++  padding: 1.15rem 1.25rem;
++  grid-template-columns: 1fr;
++}
+ @media (min-width: 768px) {
+-  .lista-viajes {
+-    grid-template-columns: 1fr 1fr;
++  .card-body {
++    grid-template-columns: repeat(2, 1fr);
+   }
+ }
++@media (min-width: 1100px) {
++  .card-body {
++    grid-template-columns: 1.1fr 1.1fr 1fr 0.95fr;
++  }
++}
++.col-label {
++  display: block;
++  font-size: 0.65rem;
++  font-weight: 800;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
++  color: var(--color-text);
++  opacity: 0.55;
++  margin-bottom: 0.35rem;
++}
++.col-strong {
++  margin: 0;
++  font-size: 0.92rem;
++  font-weight: 750;
++  color: var(--color-heading);
++}
++.col-soft {
++  margin: 0.25rem 0 0;
++  font-size: 0.82rem;
++  color: var(--color-text);
++}
++.ocupacion {
++  padding: 0.75rem;
++  border-radius: 1rem;
++  border: 1px solid var(--color-border);
++  background: var(--color-background-soft);
++}
++.ocupacion-row {
++  display: flex;
++  justify-content: space-between;
++  font-size: 0.75rem;
++  color: var(--color-text);
++}
++.ocupacion-row strong {
++  color: var(--color-heading);
++}
++.bar {
++  margin-top: 0.45rem;
++  height: 0.45rem;
++  border-radius: 999px;
++  background: color-mix(in srgb, var(--color-heading) 12%, transparent);
++  overflow: hidden;
++}
++.bar-fill {
++  height: 100%;
++  border-radius: inherit;
++  background: var(--ride-green);
++}
++.ocupacion-hint {
++  margin: 0.45rem 0 0;
++  font-size: 0.72rem;
++  color: var(--color-text);
++}
+ 
+-.acciones {
+-  margin-top: 1.5rem;
++.pasajeros {
++  padding: 1rem 1.25rem;
++  border-top: 1px solid var(--color-border);
++  background: color-mix(in srgb, var(--color-background-soft) 70%, transparent);
++}
++.pasajeros-head {
++  display: flex;
++  flex-wrap: wrap;
++  align-items: baseline;
++  justify-content: space-between;
++  gap: 0.5rem;
++  margin-bottom: 0.75rem;
++}
++.pasajeros-head h3 {
++  margin: 0;
++  font-size: 0.7rem;
++  font-weight: 800;
++  letter-spacing: 0.06em;
++  text-transform: uppercase;
++  color: var(--color-heading);
++}
++.pasajeros-hint {
++  font-size: 0.72rem;
++  color: var(--color-text);
++  opacity: 0.7;
++}
++.pasajeros-empty {
++  margin: 0;
++  font-size: 0.85rem;
++  color: var(--color-text);
++}
++.pasajeros-lista {
++  list-style: none;
++  margin: 0;
++  padding: 0;
++  display: flex;
++  flex-direction: column;
++  gap: 0.55rem;
++}
++.pasajeros-lista li {
++  display: flex;
++  align-items: center;
++  gap: 0.7rem;
++  padding: 0.7rem 0.85rem;
++  border-radius: 1rem;
++  border: 1px solid var(--color-border);
++  background: var(--color-background);
++}
++.avatar {
++  width: 2.15rem;
++  height: 2.15rem;
++  border-radius: 999px;
++  display: grid;
++  place-items: center;
++  font-size: 0.7rem;
++  font-weight: 800;
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++  flex-shrink: 0;
++}
++.p-nombre {
++  margin: 0;
++  font-size: 0.88rem;
++  font-weight: 750;
++  color: var(--color-heading);
++}
++.p-meta {
++  margin: 0.1rem 0 0;
++  font-size: 0.72rem;
++  color: var(--color-text);
++  opacity: 0.75;
+ }
+ 
+-.btn-publicar {
+-  display: inline-block;
+-  padding: 0.65rem 1.25rem;
+-  border-radius: var(--ride-radius);
++.card-foot {
++  display: flex;
++  flex-direction: column;
++  gap: 0.75rem;
++  padding: 1rem 1.25rem;
++  border-top: 1px solid var(--color-border);
++}
++@media (min-width: 768px) {
++  .card-foot {
++    flex-direction: row;
++    align-items: center;
++    justify-content: space-between;
++  }
++}
++.foot-note {
++  margin: 0;
++  font-size: 0.75rem;
++  color: var(--color-text);
++  opacity: 0.75;
++}
++.foot-actions {
++  display: flex;
++  flex-wrap: wrap;
++  gap: 0.45rem;
++}
++.btn-ghost,
++.btn-primary,
++.btn-link {
++  display: inline-flex;
++  align-items: center;
++  gap: 0.35rem;
++  padding: 0.55rem 0.9rem;
++  border-radius: 0.8rem;
++  font-size: 0.75rem;
++  font-weight: 750;
++  font-family: inherit;
++  cursor: pointer;
++  text-decoration: none;
++}
++.btn-ghost {
++  border: 1px solid var(--color-border);
++  background: var(--color-background);
++  color: var(--color-heading);
++}
++.btn-ghost:hover {
++  background: var(--color-background-soft);
++}
++.btn-danger {
++  color: #be123c;
++  border-color: transparent;
++}
++.btn-danger:hover {
++  background: color-mix(in srgb, #e11d48 8%, var(--color-background));
++  border-color: color-mix(in srgb, #e11d48 25%, var(--color-border));
++}
++.btn-primary {
++  border: none;
+   background: var(--ride-green);
+   color: #fff;
+-  font-weight: 700;
+-  text-decoration: none;
+-  transition: background var(--ride-transition);
+ }
+-
+-.btn-publicar:hover {
++.btn-primary:hover {
+   background: var(--ride-green-hover);
+-  opacity: 1;
++}
++.btn-primary svg {
++  width: 0.85rem;
++  height: 0.85rem;
++}
++
++.acciones-empty {
++  margin-top: 0.5rem;
++}
++
++.protocolo {
++  margin-top: 2rem;
++  padding: 1.35rem 1.4rem;
++  border-radius: 1.35rem;
++  display: flex;
++  flex-direction: column;
++  gap: 1rem;
++  background: linear-gradient(120deg, #064e3b, #0f172a);
++  color: #e2e8f0;
++}
++@media (min-width: 900px) {
++  .protocolo {
++    flex-direction: row;
++    align-items: center;
++    justify-content: space-between;
++  }
++}
++.protocolo-icon {
++  width: 2.85rem;
++  height: 2.85rem;
++  border-radius: 1rem;
++  display: grid;
++  place-items: center;
++  background: rgb(255 255 255 / 0.1);
++  border: 1px solid rgb(255 255 255 / 0.18);
++  color: #6ee7b7;
++  flex-shrink: 0;
++}
++.protocolo-icon svg {
++  width: 1.35rem;
++  height: 1.35rem;
++}
++.protocolo-copy {
++  flex: 1;
++  max-width: 40rem;
++}
++.protocolo-copy h2 {
++  margin: 0;
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.45rem;
++  font-size: 1rem;
++  font-weight: 800;
++  color: #fff;
++}
++.pill-req {
++  font-size: 0.62rem;
++  font-weight: 800;
++  padding: 0.15rem 0.45rem;
++  border-radius: 999px;
++  background: rgb(16 185 129 / 0.2);
++  color: #6ee7b7;
++  border: 1px solid rgb(52 211 153 / 0.35);
++}
++.protocolo-copy p {
++  margin: 0.4rem 0 0;
++  font-size: 0.8rem;
++  line-height: 1.5;
++  color: #cbd5e1;
++}
++.protocolo-btn {
++  flex-shrink: 0;
++  padding: 0.65rem 1.05rem;
++  border-radius: 0.85rem;
++  background: #fff;
++  color: #0f172a;
++  font-size: 0.75rem;
++  font-weight: 800;
++  text-decoration: none;
++}
++.protocolo-btn:hover {
++  background: #f1f5f9;
+ }
+ </style>
+diff --git a/src/views/PublicarViajeView.vue b/src/views/PublicarViajeView.vue
+index a99854b..dc103a2 100644
+--- a/src/views/PublicarViajeView.vue
++++ b/src/views/PublicarViajeView.vue
+@@ -1,11 +1,12 @@
+ <script setup lang="ts">
+ import { useRouter } from 'vue-router'
++import { useAuthStore } from '@/stores/auth'
+ import { useViajesStore } from '@/stores/viajes'
+-import EncabezadoRide from '@/components/EncabezadoRide.vue'
+ import FormularioPublicarViaje from '@/components/FormularioPublicarViaje.vue'
+ import type { NuevoViaje } from '@/types'
+ 
+ const store = useViajesStore()
++const auth = useAuthStore()
+ const router = useRouter()
+ 
+ async function handlePublicar(nuevoViaje: NuevoViaje) {
+@@ -15,36 +16,192 @@ async function handlePublicar(nuevoViaje: NuevoViaje) {
+ </script>
+ 
+ <template>
+-  <main class="publicar-view page-content">
+-    <EncabezadoRide
+-      titulo="Publicar un viaje"
+-      subtitulo="Comparte tu recorrido y ayuda a otros compañeros de la UJAP"
+-    />
+-
+-    <section class="seccion-formulario" aria-labelledby="form-titulo">
+-      <h2 id="form-titulo" class="subtitulo-seccion">Datos del viaje</h2>
+-      <FormularioPublicarViaje @publicar="handlePublicar" />
+-    </section>
++  <main class="publicar page-content">
++    <header class="hero">
++      <div class="pill">
++        Campus San Diego · Valencia, Carabobo
++        <span class="sep">/</span>
++        Conductor verificado UJAP
++      </div>
++      <h1>Publicar un viaje</h1>
++      <p>
++        Comparte tu recorrido hacia o desde el campus. Ayuda a compañeros y docentes con movilidad
++        segura — sin cobro comercial.
++      </p>
++    </header>
++
++    <div class="layout">
++      <div class="main-col">
++        <FormularioPublicarViaje @publicar="handlePublicar" />
++      </div>
++
++      <aside class="side" aria-label="Consejos para conductores">
++        <div class="side-card side-card--preview">
++          <div class="side-card-head">
++            <span>Vista previa</span>
++            <span class="live">En tiempo real</span>
++          </div>
++          <p class="preview-copy">
++            Al publicar, tu ruta aparece en
++            <strong>Viajes</strong> con origen, destino, hora y cupos para que otros reserven.
++          </p>
++          <p v-if="auth.usuario" class="preview-user">
++            Conductor: <strong>{{ auth.usuario.nombre }}</strong>
++          </p>
++        </div>
++
++        <div class="side-card side-card--dark">
++          <h3>Beneficios del conductor UJAP</h3>
++          <ul>
++            <li>Comunidad 100% con correo <code>@ujap.edu.ve</code></li>
++            <li>Control de horarios, cupos y punto de encuentro</li>
++            <li>Mapa con vía estimada al fijar origen y destino</li>
++          </ul>
++        </div>
++
++        <div class="side-card">
++          <h3>Recomendaciones</h3>
++          <ul class="tips">
++            <li>Llega 5 minutos antes al punto de encuentro.</li>
++            <li>Describe bien el vehículo (color y placa).</li>
++            <li>Si hay un contratiempo, avisa a tus pasajeros a tiempo.</li>
++          </ul>
++        </div>
++      </aside>
++    </div>
+   </main>
+ </template>
+ 
+ <style scoped>
+-.publicar-view {
++.publicar {
+   width: 100%;
+-  max-width: 48rem;
++  max-width: 72rem;
+ }
+-
+-.seccion-formulario {
+-  margin-top: 1.75rem;
+-  padding: 1.5rem;
+-  border: 1px solid var(--color-border);
+-  border-radius: var(--ride-radius-lg);
+-  background: var(--color-background-soft);
++.hero {
++  margin-bottom: 1.75rem;
+ }
+-
+-.subtitulo-seccion {
+-  margin: 0 0 1.25rem;
+-  font-size: 1rem;
++.pill {
++  display: inline-flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.35rem;
++  margin-bottom: 0.55rem;
++  padding: 0.3rem 0.7rem;
++  border-radius: 999px;
++  background: var(--ride-green-light);
++  border: 1px solid var(--ride-green-border);
++  color: var(--ride-green-fg);
++  font-size: 0.72rem;
+   font-weight: 700;
+ }
++.sep {
++  opacity: 0.5;
++  font-weight: 500;
++}
++.hero h1 {
++  margin: 0;
++  font-size: clamp(1.75rem, 3vw, 2.35rem);
++  font-weight: 900;
++  letter-spacing: -0.03em;
++  color: var(--color-heading);
++}
++.hero p {
++  margin: 0.55rem 0 0;
++  max-width: 42rem;
++  font-size: 1rem;
++  color: var(--color-text);
++  line-height: 1.55;
++}
++.layout {
++  display: grid;
++  gap: 1.5rem;
++}
++@media (min-width: 1024px) {
++  .layout {
++    grid-template-columns: minmax(0, 1.7fr) minmax(16rem, 1fr);
++    align-items: start;
++  }
++}
++.side {
++  display: grid;
++  gap: 1rem;
++}
++.side-card {
++  padding: 1.15rem 1.1rem;
++  border-radius: 1.1rem;
++  border: 1px solid var(--color-border);
++  background: var(--color-background);
++}
++.side-card-head {
++  display: flex;
++  justify-content: space-between;
++  align-items: center;
++  margin-bottom: 0.65rem;
++  font-size: 0.72rem;
++  font-weight: 800;
++  text-transform: uppercase;
++  letter-spacing: 0.05em;
++  color: var(--color-text);
++}
++.live {
++  text-transform: none;
++  letter-spacing: 0;
++  padding: 0.2rem 0.5rem;
++  border-radius: 999px;
++  background: var(--ride-green-light);
++  color: var(--ride-green-fg);
++  border: 1px solid var(--ride-green-border);
++  font-size: 0.65rem;
++}
++.preview-copy,
++.preview-user {
++  margin: 0;
++  font-size: 0.85rem;
++  color: var(--color-text);
++  line-height: 1.45;
++}
++.preview-user {
++  margin-top: 0.65rem;
++}
++.side-card--dark {
++  background: linear-gradient(160deg, #064e3b, var(--ride-green));
++  border: none;
++  color: #ecfdf5;
++}
++.side-card--dark h3 {
++  margin: 0 0 0.65rem;
++  font-size: 0.9rem;
++  font-weight: 800;
++  color: #fff;
++}
++.side-card--dark ul {
++  margin: 0;
++  padding-left: 1.1rem;
++  display: grid;
++  gap: 0.45rem;
++  font-size: 0.82rem;
++  line-height: 1.4;
++}
++.side-card--dark code {
++  font-family: ui-monospace, monospace;
++  font-size: 0.75rem;
++  color: #a7f3d0;
++}
++.side-card h3 {
++  margin: 0 0 0.65rem;
++  font-size: 0.78rem;
++  font-weight: 800;
++  text-transform: uppercase;
++  letter-spacing: 0.05em;
++  color: var(--color-heading);
++}
++.tips {
++  margin: 0;
++  padding-left: 1.1rem;
++  display: grid;
++  gap: 0.45rem;
++  font-size: 0.82rem;
++  color: var(--color-text);
++  line-height: 1.4;
++}
+ </style>
+diff --git a/src/views/ViajesView.vue b/src/views/ViajesView.vue
+index 38692d0..425831c 100644
+--- a/src/views/ViajesView.vue
++++ b/src/views/ViajesView.vue
+@@ -2,13 +2,14 @@
+ import { ref, computed, onMounted } from 'vue'
+ import { useRouter, useRoute } from 'vue-router'
+ import { useViajesStore } from '@/stores/viajes'
+-import EncabezadoRide from '@/components/EncabezadoRide.vue'
++import { useAuthStore } from '@/stores/auth'
+ import FiltroViajes from '@/components/FiltroViajes.vue'
+ import TarjetaViaje from '@/components/TarjetaViaje.vue'
+ import EstadoVacio from '@/components/EstadoVacio.vue'
+ import type { FiltroViajes as FiltroType } from '@/types'
+ 
+ const store = useViajesStore()
++const auth = useAuthStore()
+ const router = useRouter()
+ const route = useRoute()
+ 
+@@ -16,10 +17,10 @@ const filtroActivo = ref<FiltroType>({
+   origen: typeof route.query['origen'] === 'string' ? route.query['origen'] : '',
+   destino: typeof route.query['destino'] === 'string' ? route.query['destino'] : '',
+   hora: typeof route.query['hora'] === 'string' ? route.query['hora'] : '',
++  zona: typeof route.query['zona'] === 'string' ? route.query['zona'] : undefined,
+ })
+ 
+ const viajesVisibles = computed(() => store.viajesFiltrados(filtroActivo.value))
+-
+ const resetFiltros = ref(0)
+ 
+ function handleFiltrar(criterios: FiltroType) {
+@@ -27,7 +28,7 @@ function handleFiltrar(criterios: FiltroType) {
+ }
+ 
+ function verTodas() {
+-  filtroActivo.value = { origen: '', destino: '', hora: '' }
++  filtroActivo.value = { origen: '', destino: '', hora: '', zona: undefined }
+   resetFiltros.value += 1
+ }
+ 
+@@ -39,11 +40,27 @@ onMounted(() => store.cargarViajes())
+ </script>
+ 
+ <template>
+-  <main class="viajes-view page-content">
+-    <EncabezadoRide
+-      titulo="Viajes"
+-      subtitulo="Elige zona y hora. Las rutas son de gente de la UJAP."
+-    />
++  <main class="viajes page-content">
++    <header class="hero">
++      <div class="hero-copy">
++        <div class="pill">Campus San Diego · Valencia</div>
++        <h1>Viajes disponibles</h1>
++        <p>
++          Encuentra u ofrece asientos en rutas universitarias con estudiantes, profesores y personal
++          verificado de la UJAP.
++        </p>
++      </div>
++      <RouterLink
++        v-if="auth.puedePublicar"
++        to="/publicar"
++        class="btn-publicar"
++      >
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
++          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
++        </svg>
++        Publicar mi ruta
++      </RouterLink>
++    </header>
+ 
+     <p v-if="store.usandoDemo" class="aviso-demo" role="status">
+       Estás viendo rutas de ejemplo. Cuando el servidor esté arriba, se cargan las reales.
+@@ -51,19 +68,18 @@ onMounted(() => store.cargarViajes())
+ 
+     <FiltroViajes :key="resetFiltros" :inicial="filtroActivo" @filtrar="handleFiltrar" />
+ 
+-    <section class="seccion-viajes" aria-label="Lista de viajes">
++    <section class="lista-sec" aria-label="Lista de viajes">
++      <div class="lista-head">
++        <div class="lista-title">
++          <h2>Rutas disponibles</h2>
++          <span class="badge-count">{{ viajesVisibles.length }} activas</span>
++        </div>
++      </div>
++
+       <div v-if="store.cargando" class="estado-carga" role="status">Buscando asientos…</div>
+ 
+       <template v-else>
+-        <div class="toolbar">
+-          <p class="conteo" aria-live="polite">
+-            <strong>{{ viajesVisibles.length }}</strong>
+-            {{ viajesVisibles.length === 1 ? 'ruta' : 'rutas' }}
+-          </p>
+-          <RouterLink to="/publicar" class="link-publicar">Publicar la mía</RouterLink>
+-        </div>
+-
+-        <div v-if="viajesVisibles.length > 0" class="lista-viajes">
++        <div v-if="viajesVisibles.length > 0" class="grid">
+           <TarjetaViaje
+             v-for="viaje in viajesVisibles"
+             :key="viaje.id"
+@@ -83,15 +99,99 @@ onMounted(() => store.cargarViajes())
+         </EstadoVacio>
+       </template>
+     </section>
++
++    <aside class="trust-banner" aria-label="Comunidad segura">
++      <div class="trust-icon" aria-hidden="true">
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
++          <path
++            stroke-linecap="round"
++            stroke-linejoin="round"
++            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"
++          />
++        </svg>
++      </div>
++      <div>
++        <h3>
++          Comunidad universitaria segura
++          <span class="tag">Oficial UJAP</span>
++        </h3>
++        <p>
++          Conductores y pasajeros con correo
++          <code>@ujap.edu.ve</code>. No es un servicio comercial de taxi ni transporte externo.
++        </p>
++      </div>
++    </aside>
+   </main>
+ </template>
+ 
+ <style scoped>
+-.viajes-view {
++.viajes {
+   width: 100%;
+   max-width: 72rem;
+ }
+-
++.hero {
++  display: flex;
++  flex-direction: column;
++  gap: 1rem;
++  padding-bottom: 1.25rem;
++  margin-bottom: 1.25rem;
++  border-bottom: 1px solid var(--color-border);
++}
++@media (min-width: 768px) {
++  .hero {
++    flex-direction: row;
++    align-items: flex-end;
++    justify-content: space-between;
++  }
++}
++.pill {
++  display: inline-flex;
++  margin-bottom: 0.45rem;
++  padding: 0.3rem 0.65rem;
++  border-radius: 0.5rem;
++  background: var(--ride-green-light);
++  border: 1px solid var(--ride-green-border);
++  color: var(--ride-green-fg);
++  font-size: 0.72rem;
++  font-weight: 750;
++}
++.hero h1 {
++  margin: 0;
++  font-size: clamp(1.75rem, 3vw, 2.35rem);
++  font-weight: 900;
++  letter-spacing: -0.03em;
++  color: var(--color-heading);
++}
++.hero p {
++  margin: 0.45rem 0 0;
++  max-width: 36rem;
++  font-size: 0.95rem;
++  color: var(--color-text);
++  line-height: 1.5;
++}
++.btn-publicar {
++  display: inline-flex;
++  align-items: center;
++  justify-content: center;
++  gap: 0.45rem;
++  padding: 0.7rem 1.1rem;
++  border-radius: 0.85rem;
++  background: var(--ride-green);
++  color: #fff;
++  font-weight: 750;
++  font-size: 0.88rem;
++  text-decoration: none;
++  box-shadow: 0 8px 18px color-mix(in srgb, var(--ride-green) 25%, transparent);
++  white-space: nowrap;
++}
++.btn-publicar svg {
++  width: 1rem;
++  height: 1rem;
++}
++.btn-publicar:hover {
++  background: var(--ride-green-hover);
++  opacity: 1;
++}
+ .aviso-demo {
+   margin: 0 0 1rem;
+   padding: 0.65rem 0.9rem;
+@@ -101,70 +201,124 @@ onMounted(() => store.cargarViajes())
+   font-size: 0.85rem;
+   font-weight: 600;
+ }
+-
+-.seccion-viajes {
+-  margin-top: 1.25rem;
++.lista-sec {
++  margin-top: 1.75rem;
+ }
+-
+-.toolbar {
++.lista-head {
+   display: flex;
+-  align-items: baseline;
++  align-items: center;
+   justify-content: space-between;
+   gap: 1rem;
+-  margin-bottom: 0.85rem;
++  margin-bottom: 0.9rem;
+ }
+-
+-.conteo {
++.lista-title {
++  display: flex;
++  align-items: center;
++  gap: 0.55rem;
++}
++.lista-title h2 {
+   margin: 0;
+-  font-size: 0.9rem;
+-  color: var(--color-text);
+-  opacity: 0.75;
++  font-size: 1.15rem;
++  font-weight: 850;
++  color: var(--color-heading);
+ }
+-
+-.conteo strong {
++.badge-count {
++  padding: 0.2rem 0.55rem;
++  border-radius: 999px;
++  background: var(--color-background-mute);
+   color: var(--color-heading);
++  font-size: 0.72rem;
+   font-weight: 800;
+ }
+-
+-.link-publicar {
+-  font-size: 0.85rem;
+-  font-weight: 700;
+-}
+-
+-.lista-viajes {
++.grid {
+   display: grid;
++  gap: 1.1rem;
+   grid-template-columns: 1fr;
+-  gap: 0.85rem;
+ }
+-
+-@media (min-width: 720px) {
+-  .lista-viajes {
++@media (min-width: 800px) {
++  .grid {
+     grid-template-columns: 1fr 1fr;
+   }
+ }
+-
+-@media (min-width: 1100px) {
+-  .lista-viajes {
+-    grid-template-columns: 1fr 1fr 1fr;
+-  }
+-}
+-
+ .estado-carga {
+-  padding: 2rem 1rem;
++  padding: 2rem;
+   text-align: center;
+-  border-radius: 1rem;
+-  background: var(--color-background-soft);
+-  opacity: 0.8;
++  color: var(--color-text);
+ }
+-
+ .btn-reintentar {
+-  padding: 0.5rem 1.1rem;
+-  border: none;
+-  border-radius: 999px;
+-  background: var(--ride-green);
+-  color: #fff;
++  margin-top: 0.75rem;
++  padding: 0.55rem 1rem;
++  border: 1px solid var(--ride-green);
++  border-radius: 0.65rem;
++  background: transparent;
++  color: var(--ride-green-fg);
+   font-weight: 700;
+   cursor: pointer;
+-  font-family: inherit;
++}
++.trust-banner {
++  margin-top: 2.25rem;
++  display: flex;
++  flex-direction: column;
++  gap: 1rem;
++  padding: 1.35rem 1.25rem;
++  border-radius: 1.15rem;
++  background: linear-gradient(120deg, #064e3b, var(--ride-green) 55%, #0f172a);
++  color: #ecfdf5;
++  position: relative;
++  overflow: hidden;
++}
++@media (min-width: 720px) {
++  .trust-banner {
++    flex-direction: row;
++    align-items: center;
++  }
++}
++.trust-icon {
++  width: 3rem;
++  height: 3rem;
++  flex-shrink: 0;
++  display: grid;
++  place-items: center;
++  border-radius: 0.85rem;
++  background: rgba(255, 255, 255, 0.1);
++  border: 1px solid rgba(255, 255, 255, 0.2);
++  color: #6ee7b7;
++}
++.trust-icon svg {
++  width: 1.4rem;
++  height: 1.4rem;
++}
++.trust-banner h3 {
++  margin: 0;
++  display: flex;
++  flex-wrap: wrap;
++  align-items: center;
++  gap: 0.45rem;
++  font-size: 1rem;
++  font-weight: 850;
++  color: #fff;
++}
++.tag {
++  font-size: 0.62rem;
++  font-weight: 800;
++  letter-spacing: 0.04em;
++  text-transform: uppercase;
++  padding: 0.2rem 0.5rem;
++  border-radius: 999px;
++  background: rgba(16, 185, 129, 0.25);
++  border: 1px solid rgba(52, 211, 153, 0.35);
++  color: #a7f3d0;
++}
++.trust-banner p {
++  margin: 0.4rem 0 0;
++  font-size: 0.85rem;
++  line-height: 1.5;
++  color: rgba(209, 250, 229, 0.9);
++  max-width: 40rem;
++}
++.trust-banner code {
++  font-family: ui-monospace, monospace;
++  font-size: 0.78rem;
++  color: #6ee7b7;
+ }
+ </style>
