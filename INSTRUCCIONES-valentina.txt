@@ -1,0 +1,59 @@
+RideUJAP — cómo subir estos cambios con TU commit (Valentina)
+==============================================================
+
+IMPORTANTE
+----------
+- Este parche es el PRIMERO. Andrea aplica el suyo DESPUÉS de que tú
+  hayas hecho push de tu commit.
+- NO subas archivos .env con secretos reales.
+- La rama vieja docs/para-val es de un envío anterior; ignórala.
+  Usa solo esta: docs/para-valentina.
+
+1. Copia estos dos archivos a la carpeta del repo (donde está package.json):
+   - RideUJAP-para-valentina.diff
+   - INSTRUCCIONES-valentina.txt
+
+   (O haz checkout de la rama docs/para-valentina y copia los archivos
+   a tu copia de trabajo de feat/fase-1-frontend.)
+
+2. En la terminal:
+
+   git checkout feat/fase-1-frontend
+   git pull
+   git apply RideUJAP-para-valentina.diff
+   git status
+
+3. Revisa que NO estén el .diff ni este .txt en el commit. Si salen:
+
+   git restore --staged RideUJAP-para-valentina.diff INSTRUCCIONES-valentina.txt
+
+4. Agrega solo los archivos del parche y haz commit con TU usuario de git:
+
+   git add -u
+   git add docker-compose.yml docs/BACKEND-STACK.md server/Dockerfile \
+     server/src/usuarioPublico.ts src/plugins src/components/AuthShell.vue \
+     src/components/ClerkSessionSync.vue src/components/ClerkSignInPanel.vue \
+     src/components/ClerkSignUpPanel.vue src/views/OnboardingView.vue \
+     src/views/SsoCallbackView.vue
+   git status
+   git commit -m "feat(auth): Clerk, onboarding UJAP y sync de sesión"
+
+5. Sube tu rama:
+
+   git push -u origin feat/fase-1-frontend
+
+6. Avisa a Andrea que ya puedes, para que ella aplique su parche.
+
+7. Borra estos archivos locales cuando ya hayas commiteado (no van al repo
+   de producto):
+
+   rm RideUJAP-para-valentina.diff INSTRUCCIONES-valentina.txt
+
+Si git apply falla, prueba:
+
+   git apply --3way RideUJAP-para-valentina.diff
+
+Qué incluye este parche
+-----------------------
+Auth con Clerk, login/registro, onboarding, backend/API, Docker, types y
+dependencias (incl. Maps en package.json para que Andrea no pelee con el lockfile).
