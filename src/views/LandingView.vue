@@ -30,10 +30,11 @@ function buscarRuta() {
   })
 }
 
-function buscarRutaDesde(origen: string) {
-  busqueda.origen = origen
-  busqueda.destino = 'Campus UJAP'
-  buscarRuta()
+function buscarRutaDesde(zona: string) {
+  router.push({
+    path: '/viajes',
+    query: { zona },
+  })
 }
 
 const pasos = [
@@ -59,7 +60,7 @@ const pasos = [
     n: '4',
     nombre: 'encuentro' as const,
     titulo: 'Viajan juntos',
-    texto: 'Aporte para gasolina, no tarifa de taxi.',
+    texto: 'Coordinan el punto de encuentro y salen juntos.',
   },
 ]
 
@@ -109,7 +110,7 @@ const beneficios = [
             </li>
             <li>
               <IconoRide nombre="ahorro" />
-              Aporte a gasolina
+              Sin cobros en la app
             </li>
             <li>
               <IconoRide nombre="campus" />
@@ -195,7 +196,7 @@ const beneficios = [
             <article class="role-card">
               <span class="paso-icon" aria-hidden="true"><IconoRide nombre="volante" /></span>
               <h3>Conductor</h3>
-              <p>Publica hora y cupos. El aporte cubre gasolina, no es un negocio.</p>
+              <p>Publica hora y cupos. No cobramos: es carpooling entre compañeros de campus.</p>
               <RouterLink to="/publicar" class="role-link">Publicar ruta →</RouterLink>
             </article>
             <article class="role-card">

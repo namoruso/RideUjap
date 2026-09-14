@@ -29,6 +29,24 @@ See [Vite Configuration Reference](https://vite.dev/config/).
 pnpm install
 ```
 
+### Backend (Docker Postgres + API)
+
+Guía completa: [`docs/BACKEND-STACK.md`](docs/BACKEND-STACK.md)
+
+```sh
+pnpm run docker:db          # Postgres en localhost:5433
+pnpm run server:setup       # prisma db push + seed
+pnpm run server:dev         # API en :3001
+pnpm dev                    # Frontend Vite
+```
+
+Health: `http://localhost:3001/api/health`  
+Seed: `prueba@ujap.edu.ve` / `Ujap2026!`
+
+Clerk y Google Maps se activan con keys en `.env` (ver `.env.example`).
+
+## Recommended IDE Setup
+
 ### Compile and Hot-Reload for Development
 
 ```sh

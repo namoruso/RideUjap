@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { clerkActivo } from '@/plugins/clerk'
 import LandingView from '../views/LandingView.vue'
 import HomeView from '../views/HomeView.vue'
 
@@ -12,7 +13,6 @@ const router = createRouter({
     return { top: 0 }
   },
   routes: [
-    // ── Públicas ───────────────────────────────────────────────────────────
     {
       path: '/',
       name: 'landing',
@@ -22,6 +22,13 @@ const router = createRouter({
       path: '/inicio',
       name: 'inicio',
       component: HomeView,
+      meta: { requiereAuth: true },
+    },
+    {
+      path: '/onboarding',
+      name: 'onboarding',
+      component: () => import('../views/OnboardingView.vue'),
+      meta: { requiereAuth: true, esOnboarding: true },
     },
     {
       path: '/viajes',
@@ -38,8 +45,6 @@ const router = createRouter({
       name: 'about',
       component: () => import('../views/AboutView.vue'),
     },
-
-    // ── Auth ───────────────────────────────────────────────────────────────
     {
       path: '/login',
       name: 'login',
@@ -58,13 +63,16 @@ const router = createRouter({
       component: () => import('../views/RecuperarContrasenaView.vue'),
       meta: { soloInvitado: true },
     },
-
-    // ── Protegidas (requieren autenticación) ───────────────────────────────
+    {
+      path: '/sso-callback',
+      name: 'sso-callback',
+      component: () => import('../views/SsoCallbackView.vue'),
+    },
     {
       path: '/publicar',
       name: 'publicar-viaje',
       component: () => import('../views/PublicarViajeView.vue'),
-      meta: { requiereAuth: true },
+      meta: { requiereAuth: true, requiereConductor: true },
     },
     {
       path: '/mis-viajes',
@@ -75,18 +83,38 @@ const router = createRouter({
   ],
 })
 
-// ── Navigation Guard ───────────────────────────────────────────────────────────
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const auth = useAuthStore()
 
-  // Si la ruta requiere auth y no está logueado → redirige a /login
+  // Clerk puede redirigir antes de que Pinia tenga token: alinear primero.
+  if (clerkActivo() && (!auth.token || !auth.usuario)) {
+    await auth.bootstrapDesdeClerk()
+  }
+
   if (to.meta['requiereAuth'] && !auth.estaAutenticado) {
+    if (auth.sincronizandoClerk) {
+      return { name: 'login', query: { redirect: to.fullPath, sync: '1' } }
+    }
     return { name: 'login', query: { redirect: to.fullPath } }
   }
 
-  // Si la ruta es solo para invitados y ya está logueado → redirige a inicio
   if (to.meta['soloInvitado'] && auth.estaAutenticado) {
+    return { path: auth.rutaTrasAuth() }
+  }
+
+  if (auth.estaAutenticado && auth.necesitaOnboarding && !to.meta['esOnboarding']) {
+    if (to.name === 'sso-callback') return
+    return { name: 'onboarding' }
+  }
+
+  if (auth.estaAutenticado && !auth.necesitaOnboarding && to.meta['esOnboarding']) {
     return { name: 'inicio' }
+  }
+
+  if (to.meta['requiereConductor'] && auth.estaAutenticado && !auth.puedePublicar) {
+    return auth.necesitaOnboarding
+      ? { name: 'onboarding' }
+      : { name: 'inicio', query: { aviso: 'conductor' } }
   }
 })
 

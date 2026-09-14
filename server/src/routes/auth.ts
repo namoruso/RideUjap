@@ -3,6 +3,7 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import prisma from '../db'
 import { enviarCodigo } from '../email'
+import { usuarioPublico } from '../usuarioPublico'
 
 const router = Router()
 
@@ -61,6 +62,11 @@ router.post('/registro', async (req: Request, res: Response) => {
     return
   }
 
+  if (!correo.toLowerCase().endsWith('@ujap.edu.ve')) {
+    res.status(400).json({ error: 'Solo se permiten correos institucionales @ujap.edu.ve' })
+    return
+  }
+
   const validacionPwd = validarContrasena(contrasena, correo, nombre)
   if (validacionPwd !== true) {
     res.status(400).json({ error: validacionPwd })
@@ -79,7 +85,8 @@ router.post('/registro', async (req: Request, res: Response) => {
       nombre,
       correo: correo.toLowerCase(),
       telefono,
-      esConductor: Boolean(esConductor),
+      esConductor: false,
+      onboardingCompleto: false,
       contrasenaHash,
     },
   })
@@ -89,7 +96,7 @@ router.post('/registro', async (req: Request, res: Response) => {
   })
 
   res.status(201).json({
-    usuario: { id: nuevo.id, nombre: nuevo.nombre, correo: nuevo.correo, telefono: nuevo.telefono, esConductor: nuevo.esConductor },
+    usuario: usuarioPublico(nuevo),
     token,
   })
 })
@@ -104,7 +111,7 @@ router.post('/login', async (req: Request, res: Response) => {
   }
 
   const usuario = await prisma.usuario.findUnique({ where: { correo: correo.toLowerCase() } })
-  if (!usuario) {
+  if (!usuario || !usuario.contrasenaHash) {
     res.status(401).json({ error: 'Correo o contraseña incorrectos' })
     return
   }
@@ -120,7 +127,7 @@ router.post('/login', async (req: Request, res: Response) => {
   })
 
   res.json({
-    usuario: { id: usuario.id, nombre: usuario.nombre, correo: usuario.correo, telefono: usuario.telefono, esConductor: usuario.esConductor },
+    usuario: usuarioPublico(usuario),
     token,
   })
 })
@@ -243,6 +250,92 @@ router.post('/restablecer-contrasena', async (req: Request, res: Response) => {
   })
 
   res.json({ message: 'Contraseña restablecida correctamente' })
+})
+
+// ── POST /api/auth/clerk/sync ─────────────────────────────────────────────────
+// Tras SignUp/SignIn con Clerk, el frontend envía el session token y creamos/linkeamos Usuario.
+router.post('/clerk/sync', async (req: Request, res: Response) => {
+  const secret = process.env['CLERK_SECRET_KEY']
+  if (!secret) {
+    res.status(503).json({ error: 'Clerk no está configurado en el servidor' })
+    return
+  }
+
+  const authHeader = req.headers['authorization']
+  const token = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null
+  if (!token) {
+    res.status(401).json({ error: 'Se requiere el token de sesión de Clerk' })
+    return
+  }
+
+  const { telefono = '', esConductor = false, nombre } = req.body as {
+    telefono?: string
+    esConductor?: boolean
+    nombre?: string
+  }
+
+  try {
+    const { verifyToken, createClerkClient } = await import('@clerk/backend')
+    const payload = await verifyToken(token, { secretKey: secret })
+    const clerk = createClerkClient({ secretKey: secret })
+    const clerkUser = await clerk.users.getUser(payload.sub)
+    const correo =
+      clerkUser.emailAddresses.find((e) => e.id === clerkUser.primaryEmailAddressId)
+        ?.emailAddress ?? clerkUser.emailAddresses[0]?.emailAddress
+
+    if (!correo) {
+      res.status(400).json({ error: 'La cuenta de Clerk no tiene correo' })
+      return
+    }
+    if (!correo.toLowerCase().endsWith('@ujap.edu.ve')) {
+      res.status(403).json({ error: 'Solo se permiten correos @ujap.edu.ve' })
+      return
+    }
+
+    const nombreFinal =
+      nombre ||
+      [clerkUser.firstName, clerkUser.lastName].filter(Boolean).join(' ') ||
+      correo.split('@')[0] ||
+      'Estudiante UJAP'
+
+    let usuario = await prisma.usuario.findUnique({ where: { clerkId: payload.sub } })
+    if (!usuario) {
+      usuario = await prisma.usuario.findUnique({ where: { correo: correo.toLowerCase() } })
+    }
+
+    if (usuario) {
+      usuario = await prisma.usuario.update({
+        where: { id: usuario.id },
+        data: {
+          clerkId: payload.sub,
+          nombre: nombreFinal,
+          telefono: telefono || usuario.telefono,
+          correoVerificado: true,
+          // No forzar esConductor en sync: el onboarding lo decide
+        },
+      })
+    } else {
+      usuario = await prisma.usuario.create({
+        data: {
+          clerkId: payload.sub,
+          nombre: nombreFinal,
+          correo: correo.toLowerCase(),
+          telefono: telefono || '',
+          esConductor: false,
+          onboardingCompleto: false,
+          correoVerificado: true,
+          contrasenaHash: null,
+        },
+      })
+    }
+
+    res.json({
+      usuario: usuarioPublico(usuario),
+    })
+  } catch (e) {
+    console.error('clerk/sync', e)
+    res.status(401).json({ error: 'Token Clerk inválido' })
+  }
 })
 
 export default router

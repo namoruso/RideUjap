@@ -6,6 +6,8 @@ import { useAuthStore } from '@/stores/auth'
 import type { UsuarioPublico } from '@/types'
 import TarjetaUsuario from '@/components/TarjetaUsuario.vue'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
+import ModalDialog from '@/components/ModalDialog.vue'
+import MapaTrayecto from '@/components/MapaTrayecto.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -26,6 +28,26 @@ const esConductorDelViaje = computed(
 )
 
 const yaUnido = computed(() => store.yaUnido(viajeId.value))
+
+const tieneMapa = computed(
+  () =>
+    viaje.value?.origenLat != null &&
+    viaje.value?.origenLng != null &&
+    viaje.value?.destinoLat != null &&
+    viaje.value?.destinoLng != null,
+)
+
+const origenMapa = computed(() =>
+  viaje.value?.origenLat != null && viaje.value?.origenLng != null
+    ? { lat: viaje.value.origenLat, lng: viaje.value.origenLng, label: viaje.value.origen }
+    : null,
+)
+
+const destinoMapa = computed(() =>
+  viaje.value?.destinoLat != null && viaje.value?.destinoLng != null
+    ? { lat: viaje.value.destinoLat, lng: viaje.value.destinoLng, label: viaje.value.destino }
+    : null,
+)
 
 const fechaFormateada = computed(() => {
   if (!viaje.value?.fecha) return ''
@@ -148,6 +170,10 @@ watch(viaje, async (v) => {
       <section class="panel-viaje" aria-labelledby="detalle-titulo">
         <EncabezadoRide :titulo="`${viaje.origen} → ${viaje.destino}`" subtitulo="Detalle del viaje" />
 
+        <div v-if="tieneMapa" class="mapa-bloque">
+          <MapaTrayecto :origen="origenMapa" :destino="destinoMapa" height="240px" />
+        </div>
+
         <dl class="info-lista">
           <div v-if="viaje.puntoEncuentro" class="info-item">
             <dt class="info-label">
@@ -255,33 +281,32 @@ watch(viaje, async (v) => {
     <p v-else class="cargando" role="status">Cargando viaje…</p>
 
     <!-- Modal Confirmación Eliminar -->
-    <div v-if="mostrarModalConfirmacion" class="modal-overlay" @click.self="cancelarEliminar">
-      <div class="modal-content">
-        <h3>Eliminar viaje</h3>
-        <p>¿Estás seguro de que deseas eliminar este viaje? Esta acción no se puede deshacer y notificará a los pasajeros unidos.</p>
-        <div class="modal-actions">
-          <button type="button" class="btn-cancelar" @click="cancelarEliminar">Cancelar</button>
-          <button type="button" class="btn-confirmar-eliminar" @click="confirmarEliminarViaje">Sí, eliminar</button>
-        </div>
-      </div>
-    </div>
+    <ModalDialog
+      :open="mostrarModalConfirmacion"
+      titulo="Eliminar viaje"
+      mensaje="¿Estás seguro de que deseas eliminar este viaje? Esta acción no se puede deshacer y notificará a los pasajeros unidos."
+      variante-confirmar="danger"
+      texto-confirmar="Sí, eliminar"
+      texto-cancelar="Cancelar"
+      @cancelar="cancelarEliminar"
+      @confirmar="confirmarEliminarViaje"
+    />
 
     <!-- Modal Editar Hora -->
-    <div v-if="mostrarModalEditarHora" class="modal-overlay" @click.self="cancelarEditarHora">
-      <div class="modal-content">
-        <h3>Editar hora de salida</h3>
-        <p>Selecciona el nuevo horario de salida para tu viaje.</p>
-        
-        <div style="margin-bottom: 1.5rem;">
-          <input type="time" v-model="nuevaHora" class="input-hora-grande" />
-        </div>
-
-        <div class="modal-actions">
-          <button type="button" class="btn-cancelar" @click="cancelarEditarHora">Cancelar</button>
-          <button type="button" class="btn-guardar" @click="confirmarEditarHora">Guardar hora</button>
-        </div>
+    <ModalDialog
+      :open="mostrarModalEditarHora"
+      titulo="Editar hora de salida"
+      mensaje="Selecciona el nuevo horario de salida para tu viaje."
+      variante-confirmar="primary"
+      texto-confirmar="Guardar hora"
+      texto-cancelar="Cancelar"
+      @cancelar="cancelarEditarHora"
+      @confirmar="confirmarEditarHora"
+    >
+      <div class="hora-field">
+        <input v-model="nuevaHora" type="time" class="input-hora-grande" />
       </div>
-    </div>
+    </ModalDialog>
   </main>
 </template>
 
@@ -318,6 +343,10 @@ watch(viaje, async (v) => {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
+}
+
+.mapa-bloque {
+  margin-top: -0.5rem;
 }
 
 .panel-titulo {
@@ -443,14 +472,8 @@ watch(viaje, async (v) => {
   border-color: var(--ride-green);
   box-shadow: 0 0 0 3px var(--ride-green-light);
 }
-.btn-guardar {
-  padding: 0.5rem 1rem;
-  border: none;
-  border-radius: 6px;
-  background: var(--ride-green);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
+.hora-field {
+  margin-top: 0.85rem;
 }
 
 .aviso-info {
@@ -529,70 +552,4 @@ watch(viaje, async (v) => {
 }
 
 .cargando { text-align: center; padding: 3rem; opacity: 0.5; }
-
-/* Modal styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.modal-content {
-  background: var(--color-background);
-  padding: 1.5rem;
-  border-radius: var(--ride-radius-lg);
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-}
-
-.modal-content h3 {
-  margin-top: 0;
-  color: var(--color-heading);
-  font-size: 1.25rem;
-}
-
-.modal-content p {
-  color: var(--color-text);
-  margin-bottom: 1.5rem;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-.modal-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-.btn-cancelar {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--color-border);
-  background: transparent;
-  color: var(--color-text);
-  border-radius: var(--ride-radius);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-confirmar-eliminar {
-  padding: 0.5rem 1rem;
-  border: none;
-  background: #dc2626;
-  color: #fff;
-  border-radius: var(--ride-radius);
-  cursor: pointer;
-  font-weight: 600;
-}
-
-.btn-confirmar-eliminar:hover {
-  background: #b91c1c;
-}
 </style>

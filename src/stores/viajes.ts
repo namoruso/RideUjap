@@ -3,6 +3,7 @@ import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { viajesEjemplo } from '@/data/ejemplos'
 import type { Viaje, FiltroViajes, NuevoViaje } from '@/types'
+import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
 
 const SS_KEY = 'ride_mis_uniones'
 
@@ -21,7 +22,7 @@ export const useViajesStore = defineStore('viajes', () => {
     sessionStorage.setItem(SS_KEY, JSON.stringify(misUniones.value))
   }
 
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+  const API_URL = String(import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim()
 
   async function cargarViajes() {
     cargando.value = true
@@ -46,7 +47,7 @@ export const useViajesStore = defineStore('viajes', () => {
     try {
       const res = await fetch(`${API_URL}/viajes`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...auth.authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
         body: JSON.stringify(nuevoViaje),
       })
       if (!res.ok) throw new Error('Error al publicar el viaje')
@@ -67,7 +68,7 @@ export const useViajesStore = defineStore('viajes', () => {
     try {
       const res = await fetch(`${API_URL}/viajes/${id}/unirse`, {
         method: 'POST',
-        headers: auth.authHeaders(),
+        headers: await auth.authHeaders(),
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al unirse al viaje' }
@@ -88,7 +89,7 @@ export const useViajesStore = defineStore('viajes', () => {
     try {
       const res = await fetch(`${API_URL}/viajes/${id}/unirse`, {
         method: 'DELETE',
-        headers: auth.authHeaders(),
+        headers: await auth.authHeaders(),
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al abandonar el viaje' }
@@ -113,7 +114,7 @@ export const useViajesStore = defineStore('viajes', () => {
     try {
       const res = await fetch(`${API_URL}/viajes/${id}`, {
         method: 'DELETE',
-        headers: auth.authHeaders(),
+        headers: await auth.authHeaders(),
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al eliminar el viaje' }
@@ -131,7 +132,7 @@ export const useViajesStore = defineStore('viajes', () => {
     try {
       const res = await fetch(`${API_URL}/viajes/${id}/hora`, {
         method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', ...auth.authHeaders() },
+        headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
         body: JSON.stringify({ hora }),
       })
       const data = await res.json()
@@ -150,7 +151,7 @@ export const useViajesStore = defineStore('viajes', () => {
     const auth = useAuthStore()
     try {
       const res = await fetch(`${API_URL}/viajes/${id}/pasajeros`, {
-        headers: auth.authHeaders(),
+        headers: await auth.authHeaders(),
       })
       if (!res.ok) return []
       return await res.json()
@@ -161,11 +162,15 @@ export const useViajesStore = defineStore('viajes', () => {
   }
 
   const viajesFiltrados = computed(() => (filtro: FiltroViajes) => {
-    return viajes.value.filter(v => {
-      const origenOk = !filtro.origen || v.origen.toLowerCase().includes(filtro.origen.toLowerCase())
-      const destinoOk = !filtro.destino || v.destino.toLowerCase().includes(filtro.destino.toLowerCase())
+    return viajes.value.filter((v) => {
+      const lugares = blobLugaresViaje(v)
+      // Zone chip OR free-text: match against origen, destino and encuentro so
+      // "San Diego" finds both San Diego→Campus and Campus→San Diego (or geocoded names).
+      const zonaOk = !filtro.zona || lugarCoincide(lugares, filtro.zona)
+      const origenOk = !filtro.origen || lugarCoincide(lugares, filtro.origen)
+      const destinoOk = !filtro.destino || lugarCoincide(lugares, filtro.destino)
       const horaOk = !filtro.hora || v.hora.startsWith(filtro.hora)
-      return origenOk && destinoOk && horaOk
+      return zonaOk && origenOk && destinoOk && horaOk
     })
   })
 

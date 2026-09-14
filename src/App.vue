@@ -2,10 +2,13 @@
 import { computed, ref, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import ClerkSessionSync from '@/components/ClerkSessionSync.vue'
+import { clerkActivo } from '@/plugins/clerk'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const usaClerk = clerkActivo()
 
 const esInicio = computed(() => route.name === 'landing')
 const esViajes = computed(() => route.path.startsWith('/viajes'))
@@ -53,6 +56,7 @@ function cerrarSesion() {
 
 <template>
   <div class="app-shell">
+    <ClerkSessionSync v-if="usaClerk" />
     <header class="topbar">
       <RouterLink class="brand" to="/" aria-label="RideUJAP, ir al inicio" @click="cerrarMenu">
         <img src="/Logo-UJAP2.jpg" alt="" class="brand-logo" />
@@ -67,7 +71,13 @@ function cerrarSesion() {
         <RouterLink to="/viajes" :class="{ 'is-active': esViajes }">Viajes</RouterLink>
         <template v-if="auth.estaAutenticado">
           <RouterLink to="/inicio" :class="{ 'is-active': esPanel }">Mi panel</RouterLink>
-          <RouterLink to="/publicar" :class="{ 'is-active': esPublicar }">Publicar</RouterLink>
+          <RouterLink
+            v-if="auth.puedePublicar"
+            to="/publicar"
+            :class="{ 'is-active': esPublicar }"
+          >
+            Publicar
+          </RouterLink>
           <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }">Mis viajes</RouterLink>
         </template>
         <RouterLink to="/about" :class="{ 'is-active': esAbout }">Acerca de</RouterLink>
@@ -184,7 +194,12 @@ function cerrarSesion() {
         <RouterLink to="/inicio" :class="{ 'is-active': esPanel }" @click="cerrarMenu">
           Mi panel
         </RouterLink>
-        <RouterLink to="/publicar" :class="{ 'is-active': esPublicar }" @click="cerrarMenu">
+        <RouterLink
+          v-if="auth.puedePublicar"
+          to="/publicar"
+          :class="{ 'is-active': esPublicar }"
+          @click="cerrarMenu"
+        >
           Publicar viaje
         </RouterLink>
         <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }" @click="cerrarMenu">

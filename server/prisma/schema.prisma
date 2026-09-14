@@ -1,4 +1,4 @@
-// RideUJAP — Prisma schema
+// RideUJAP — Prisma schema (PostgreSQL)
 // Docs: https://pris.ly/d/prisma-schema
 
 generator client {
@@ -6,18 +6,32 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
 model Usuario {
   id             Int      @id @default(autoincrement())
+  clerkId        String?  @unique
   nombre         String
   correo         String   @unique
-  telefono       String
+  telefono       String   @default("")
   esConductor    Boolean  @default(false)
-  contrasenaHash String
-  creadoEn       DateTime @default(now())
+  /// Null cuando el usuario entra solo con Clerk
+  contrasenaHash String?
+  correoVerificado Boolean @default(false)
+
+  /// false = debe pasar por /onboarding (viajero vs conductor)
+  onboardingCompleto Boolean @default(false)
+
+  // Perfil del vehículo (conductores)
+  marcaVehiculo  String?
+  placa          String?
+  modeloVehiculo String?
+  colorVehiculo  String?
+  puestosVehiculo Int?
+
+  creadoEn DateTime @default(now())
 
   viajes  Viaje[]         @relation("Conductor")
   uniones PasajeroViaje[]
@@ -34,7 +48,14 @@ model Viaje {
   cuposDisponibles    Int
   descripcionVehiculo String
   estado              String   @default("disponible")
-  creadoEn            DateTime @default(now())
+
+  // Coordenadas Google Maps (estado Carabobo)
+  origenLat  Float?
+  origenLng  Float?
+  destinoLat Float?
+  destinoLng Float?
+
+  creadoEn DateTime @default(now())
 
   idConductor Int
   conductor   Usuario @relation("Conductor", fields: [idConductor], references: [id])
@@ -43,8 +64,8 @@ model Viaje {
 }
 
 model PasajeroViaje {
-  id       Int      @id @default(autoincrement())
-  unidoEn  DateTime @default(now())
+  id      Int      @id @default(autoincrement())
+  unidoEn DateTime @default(now())
 
   idUsuario Int
   usuario   Usuario @relation(fields: [idUsuario], references: [id])

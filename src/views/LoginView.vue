@@ -1,38 +1,43 @@
 <script setup lang="ts">
-import { reactive } from 'vue'
+import { reactive, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { clerkActivo } from '@/plugins/clerk'
+import AuthShell from '@/components/AuthShell.vue'
+import ClerkSignInPanel from '@/components/ClerkSignInPanel.vue'
 
 const auth = useAuthStore()
 const router = useRouter()
 const route = useRoute()
+const usaClerk = clerkActivo()
 
 const form = reactive({ correo: '', contrasena: '' })
+
+onMounted(() => {
+  const q = route.query['error']
+  if (typeof q === 'string' && q.trim()) {
+    auth.error = q
+  }
+})
 
 async function handleSubmit() {
   const ok = await auth.iniciarSesion({ correo: form.correo, contrasena: form.contrasena })
   if (ok) {
-    const redirect = (route.query['redirect'] as string) || '/inicio'
-    router.push(redirect)
+    await router.push((route.query['redirect'] as string) || auth.rutaTrasAuth())
   }
 }
 </script>
 
 <template>
-  <main class="auth-page page-content">
-    <div class="auth-card">
-      <div class="auth-logo">
-        <div class="marca">
-          <img src="/Logo-UJAP2.jpg" alt="Logo UJAP" class="marca-logo" />
-          <span>RideUJAP</span>
-        </div>
-        <h1>Iniciar sesión</h1>
-        <p class="subtitulo">Entra con tu correo UJAP para reservar o publicar un asiento</p>
-      </div>
+  <AuthShell modo="login" :con-clerk="usaClerk">
+    <ClerkSignInPanel v-if="usaClerk" />
 
+    <template v-else>
       <form class="auth-form" novalidate @submit.prevent="handleSubmit">
         <div class="campo">
-          <label for="login-correo">Correo institucional</label>
+          <div class="campo-head">
+            <label for="login-correo">Correo electrónico</label>
+          </div>
           <input
             id="login-correo"
             v-model="form.correo"
@@ -44,7 +49,10 @@ async function handleSubmit() {
         </div>
 
         <div class="campo">
-          <label for="login-contrasena">Contraseña</label>
+          <div class="campo-head">
+            <label for="login-contrasena">Contraseña</label>
+            <RouterLink to="/recuperar" class="olvide-link">¿Has olvidado tu contraseña?</RouterLink>
+          </div>
           <input
             id="login-contrasena"
             v-model="form.contrasena"
@@ -53,204 +61,134 @@ async function handleSubmit() {
             required
             autocomplete="current-password"
           />
-          <div class="olvide-link-container">
-            <RouterLink to="/recuperar" class="link-secundario"
-              >¿Olvidaste tu contraseña?</RouterLink
-            >
-          </div>
         </div>
 
-        <div v-if="auth.error" class="error-container">
-          <p class="error-msg" role="alert">{{ auth.error }}</p>
-        </div>
+        <div v-if="auth.error" class="error-box" role="alert">{{ auth.error }}</div>
 
         <button type="submit" class="btn-principal" :disabled="auth.cargando">
-          {{ auth.cargando ? 'Iniciando sesión…' : 'Iniciar sesión' }}
+          <span>{{ auth.cargando ? 'Entrando…' : 'Continuar' }}</span>
+          <svg
+            v-if="!auth.cargando"
+            class="btn-arrow"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2.5"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+          </svg>
         </button>
       </form>
 
-      <div class="auth-links">
-        <span>¿No tienes cuenta?</span>
-        <RouterLink to="/registro">Crear cuenta</RouterLink>
-      </div>
-    </div>
-  </main>
+      <p class="switch">
+        ¿No tienes cuenta?
+        <RouterLink to="/registro">Regístrate</RouterLink>
+      </p>
+    </template>
+  </AuthShell>
 </template>
 
 <style scoped>
-.auth-page {
-  display: flex;
-  justify-content: center;
-  align-items: flex-start;
-  padding: 2.5rem 1rem;
-  min-height: 60vh;
-}
-
-.auth-card {
-  width: 100%;
-  max-width: 24rem; /* Más angosto para que el formulario corto se vea más estilizado */
-  padding: 2.5rem 2rem;
-  border: 1px solid var(--color-border);
-  border-radius: var(--ride-radius-lg);
-  background: var(--color-background);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
-}
-
-.auth-logo {
-  margin-bottom: 2rem;
-  text-align: center;
-}
-
-.marca {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.85rem;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: var(--ride-green);
-  margin-bottom: 0.75rem;
-  padding: 0.4rem 0.75rem;
-  background: var(--ride-green-light, #e0f2ec);
-  border-radius: 6px;
-}
-
-.marca-logo {
-  height: 1.25rem;
-  width: auto;
-  border-radius: 2px;
-}
-
-h1 {
-  margin: 0 0 0.5rem;
-  font-size: 1.6rem;
-  color: var(--color-heading);
-}
-
-.subtitulo {
-  margin: 0;
-  font-size: 0.9rem;
-  color: var(--color-text);
-}
-
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
+  gap: 1rem;
+  width: min(24rem, 100%);
+  margin-inline: auto;
 }
-
 .campo {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
 }
-
+.campo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
 .campo label {
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--color-heading);
 }
-
 .campo input {
   width: 100%;
-  padding: 0.7rem 0.85rem;
-  border: 1.5px solid var(--color-border);
-  border-radius: 8px;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: 0.75rem;
   background: var(--color-background-soft);
-  color: var(--color-text);
-  font-size: 0.95rem;
-  transition: all var(--ride-transition);
+  color: var(--color-heading);
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition:
+    border-color 0.15s ease,
+    box-shadow 0.15s ease;
 }
-
 .campo input:focus {
   outline: none;
   border-color: var(--ride-green);
-  background: var(--color-background);
-  box-shadow: 0 0 0 4px var(--ride-green-light);
+  box-shadow: 0 0 0 3px var(--ride-green-light);
 }
-
-.olvide-link-container {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 0.2rem;
-}
-
-.link-secundario {
-  font-size: 0.8rem;
-  color: var(--ride-green);
-  font-weight: 600;
+.olvide-link,
+.switch a {
+  color: var(--ride-green-fg, var(--ride-green));
+  font-weight: 700;
   text-decoration: none;
+  font-size: 0.75rem;
 }
-
-.link-secundario:hover {
+.olvide-link:hover,
+.switch a:hover {
   text-decoration: underline;
 }
-
-.error-container {
-  background: #fef2f2;
+.error-box {
+  background: color-mix(in srgb, #ef4444 12%, var(--color-background));
   border-left: 4px solid #ef4444;
   padding: 0.75rem 1rem;
-  border-radius: 4px;
-}
-
-.error-msg {
-  margin: 0;
-  color: #b91c1c;
-  font-size: 0.875rem;
-  font-weight: 500;
-  line-height: 1.4;
-}
-
-.btn-principal {
-  padding: 0.8rem;
-  border: none;
   border-radius: 8px;
+  color: color-mix(in srgb, #b91c1c 65%, var(--color-heading));
+  font-size: 0.875rem;
+}
+.btn-principal {
+  margin-top: 0.35rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  padding: 0.8rem 1rem;
+  border: none;
+  border-radius: 0.75rem;
   background: var(--ride-green);
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
   cursor: pointer;
-  transition: all var(--ride-transition);
-  margin-top: 0.5rem;
-  box-shadow: 0 4px 12px rgba(11, 110, 79, 0.2);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--ride-green) 25%, transparent);
+  transition:
+    background 0.15s ease,
+    box-shadow 0.15s ease;
 }
-
 .btn-principal:hover:not(:disabled) {
   background: var(--ride-green-hover);
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(11, 110, 79, 0.3);
 }
-
-.btn-principal:active:not(:disabled) {
-  transform: translateY(1px);
-  box-shadow: 0 2px 8px rgba(11, 110, 79, 0.2);
-}
-
 .btn-principal:disabled {
   opacity: 0.65;
   cursor: not-allowed;
-  box-shadow: none;
 }
-
-.auth-links {
-  margin-top: 1.75rem;
+.btn-arrow {
+  width: 1rem;
+  height: 1rem;
+  transition: transform 0.15s ease;
+}
+.btn-principal:hover:not(:disabled) .btn-arrow {
+  transform: translateX(2px);
+}
+.switch {
+  margin: 1.2rem 0 0;
   text-align: center;
-  font-size: 0.9rem;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
+  font-size: 0.78rem;
+  font-weight: 500;
   color: var(--color-text);
-}
-
-.auth-links a {
-  color: var(--ride-green);
-  font-weight: 700;
-  text-decoration: none;
-}
-
-.auth-links a:hover {
-  text-decoration: underline;
 }
 </style>
