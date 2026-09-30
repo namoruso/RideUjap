@@ -73,7 +73,7 @@ export const useViajesStore = defineStore('viajes', () => {
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al unirse al viaje' }
 
-      const idx = viajes.value.findIndex(v => v.id === id)
+      const idx = viajes.value.findIndex((v) => v.id === id)
       if (idx !== -1) viajes.value[idx] = data.viaje
       misUniones.value.push(id)
       guardarUniones()
@@ -95,7 +95,7 @@ export const useViajesStore = defineStore('viajes', () => {
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al abandonar el viaje' }
 
       await cargarViajes()
-      misUniones.value = misUniones.value.filter(uid => uid !== id)
+      misUniones.value = misUniones.value.filter((uid) => uid !== id)
       guardarUniones()
       return { ok: true, mensaje: data.message ?? 'Has abandonado el viaje' }
     } catch (e: unknown) {
@@ -118,9 +118,32 @@ export const useViajesStore = defineStore('viajes', () => {
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al eliminar el viaje' }
-      
-      viajes.value = viajes.value.filter(v => v.id !== id)
+
+      viajes.value = viajes.value.filter((v) => v.id !== id)
       return { ok: true, mensaje: 'Viaje eliminado' }
+    } catch (e: unknown) {
+      console.error(e)
+      return { ok: false, mensaje: 'Error de conexión con el servidor' }
+    }
+  }
+
+  async function actualizarViaje(
+    id: number,
+    datos: Partial<NuevoViaje> & { estado?: string },
+  ): Promise<{ ok: boolean; mensaje: string; viaje?: Viaje }> {
+    const auth = useAuthStore()
+    try {
+      const res = await fetch(`${API_URL}/viajes/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
+        body: JSON.stringify(datos),
+      })
+      const data = await res.json()
+      if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al actualizar el viaje' }
+
+      const idx = viajes.value.findIndex((v) => v.id === id)
+      if (idx !== -1) viajes.value[idx] = data as Viaje
+      return { ok: true, mensaje: 'Viaje actualizado', viaje: data as Viaje }
     } catch (e: unknown) {
       console.error(e)
       return { ok: false, mensaje: 'Error de conexión con el servidor' }
@@ -137,8 +160,8 @@ export const useViajesStore = defineStore('viajes', () => {
       })
       const data = await res.json()
       if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al editar la hora' }
-      
-      const idx = viajes.value.findIndex(v => v.id === id)
+
+      const idx = viajes.value.findIndex((v) => v.id === id)
       if (idx !== -1) viajes.value[idx] = data.viaje
       return { ok: true, mensaje: 'Hora actualizada' }
     } catch (e: unknown) {
@@ -164,8 +187,6 @@ export const useViajesStore = defineStore('viajes', () => {
   const viajesFiltrados = computed(() => (filtro: FiltroViajes) => {
     return viajes.value.filter((v) => {
       const lugares = blobLugaresViaje(v)
-      // Zone chip OR free-text: match against origen, destino and encuentro so
-      // "San Diego" finds both San Diego→Campus and Campus→San Diego (or geocoded names).
       const zonaOk = !filtro.zona || lugarCoincide(lugares, filtro.zona)
       const origenOk = !filtro.origen || lugarCoincide(lugares, filtro.origen)
       const destinoOk = !filtro.destino || lugarCoincide(lugares, filtro.destino)
@@ -175,19 +196,33 @@ export const useViajesStore = defineStore('viajes', () => {
   })
 
   const viajesDelUsuario = computed(() => (idConductor: number) =>
-    viajes.value.filter(v => v.idConductor === idConductor),
+    viajes.value.filter((v) => v.idConductor === idConductor),
   )
 
   const getViajeById = computed(() => (id: number) =>
-    viajes.value.find(v => v.id === id) ?? null,
+    viajes.value.find((v) => v.id === id) ?? null,
   )
 
   const yaUnido = computed(() => (id: number) => misUniones.value.includes(id))
 
   return {
-    viajes, cargando, error, misUniones, usandoDemo,
-    cargarViajes, publicarViaje, unirseAViaje, abandonarViaje, limpiarUniones,
-    eliminarViaje, editarHoraViaje, obtenerPasajeros,
-    viajesFiltrados, viajesDelUsuario, getViajeById, yaUnido,
+    viajes,
+    cargando,
+    error,
+    misUniones,
+    usandoDemo,
+    cargarViajes,
+    publicarViaje,
+    unirseAViaje,
+    abandonarViaje,
+    limpiarUniones,
+    eliminarViaje,
+    actualizarViaje,
+    editarHoraViaje,
+    obtenerPasajeros,
+    viajesFiltrados,
+    viajesDelUsuario,
+    getViajeById,
+    yaUnido,
   }
 })

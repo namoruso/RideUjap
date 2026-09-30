@@ -7,7 +7,6 @@ import { verificarToken } from './middleware/auth'
 import authRouter from './routes/auth'
 import { usuarioPublico } from './usuarioPublico'
 
-// Carga siempre server/.env aunque el proceso se lance desde otra carpeta
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
 const app = express()
@@ -26,7 +25,11 @@ function wrapAsync(
 
 const auth = wrapAsync(verificarToken)
 
-// ── Health ────────────────────────────────────────────────────────────────────
+function idParam(value: string | string[] | undefined): number {
+  const raw = Array.isArray(value) ? value[0] : value
+  return parseInt(raw ?? '0', 10)
+}
+
 app.get('/api/health', async (_req: Request, res: Response) => {
   try {
     await prisma.$queryRaw`SELECT 1`
@@ -41,12 +44,8 @@ app.get('/api/health', async (_req: Request, res: Response) => {
   }
 })
 
-// ── Auth ──────────────────────────────────────────────────────────────────────
 app.use('/api/auth', authRouter)
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-/** Marca como finalizado los viajes cuya fecha+hora ya pasó */
 async function expirarViajes() {
   const ahora = new Date()
   const viajes = await prisma.viaje.findMany({
@@ -75,9 +74,6 @@ type BodyViaje = {
   destinoLng?: number | null
 }
 
-// ── Viajes ────────────────────────────────────────────────────────────────────
-
-// GET /api/viajes — público
 app.get('/api/viajes', async (req: Request, res: Response) => {
   await expirarViajes()
 
@@ -114,10 +110,9 @@ app.get('/api/viajes', async (req: Request, res: Response) => {
   )
 })
 
-// GET /api/viajes/conductor/:id — ANTES de /:id (si no, "conductor" se parsea como id)
 app.get('/api/viajes/conductor/:id', auth, async (req: Request, res: Response) => {
   const viajes = await prisma.viaje.findMany({
-    where: { idConductor: parseInt(req.params['id'] ?? '0') },
+    where: { idConductor: idParam(req.params['id']) },
     include: { conductor: { select: { nombre: true, telefono: true } } },
     orderBy: { creadoEn: 'desc' },
   })
@@ -131,10 +126,9 @@ app.get('/api/viajes/conductor/:id', auth, async (req: Request, res: Response) =
   )
 })
 
-// GET /api/viajes/:id — público
 app.get('/api/viajes/:id', async (req: Request, res: Response) => {
   const viaje = await prisma.viaje.findUnique({
-    where: { id: parseInt(req.params['id'] ?? '0') },
+    where: { id: idParam(req.params['id']) },
     include: {
       conductor: {
         select: {
@@ -161,7 +155,6 @@ app.get('/api/viajes/:id', async (req: Request, res: Response) => {
   })
 })
 
-// POST /api/viajes — requiere autenticación + perfil conductor completo
 app.post('/api/viajes', auth, async (req: Request, res: Response) => {
   const conductor = await prisma.usuario.findUnique({ where: { id: req.usuario!.id } })
   if (!conductor?.esConductor || !conductor.onboardingCompleto || !conductor.placa) {
@@ -221,9 +214,78 @@ app.post('/api/viajes', auth, async (req: Request, res: Response) => {
   })
 })
 
-// DELETE /api/viajes/:id
+app.put('/api/viajes/:id', auth, async (req: Request, res: Response) => {
+  const viajeId = idParam(req.params['id'])
+  const userId = req.usuario!.id
+
+  const viaje = await prisma.viaje.findUnique({ where: { id: viajeId } })
+  if (!viaje) {
+    res.status(404).json({ error: 'Viaje no encontrado' })
+    return
+  }
+  if (viaje.idConductor !== userId) {
+    res.status(403).json({ error: 'No tienes permiso para actualizar este viaje' })
+    return
+  }
+
+  const {
+    origen,
+    destino,
+    puntoEncuentro,
+    fecha,
+    hora,
+    cuposDisponibles,
+    descripcionVehiculo,
+    origenLat,
+    origenLng,
+    destinoLat,
+    destinoLng,
+    estado,
+  } = req.body as BodyViaje & { estado?: string }
+
+  if (!origen || !destino || !fecha || !hora || cuposDisponibles == null) {
+    res.status(400).json({ error: 'Faltan campos requeridos' })
+    return
+  }
+
+  const ocupados = viaje.cuposTotal - viaje.cuposDisponibles
+  const nuevoTotal = Number(cuposDisponibles)
+  if (Number.isNaN(nuevoTotal) || nuevoTotal < ocupados) {
+    res.status(400).json({
+      error: `cuposDisponibles no puede ser menor que los asientos ya ocupados (${ocupados})`,
+    })
+    return
+  }
+
+  const viajeActualizado = await prisma.viaje.update({
+    where: { id: viajeId },
+    data: {
+      origen,
+      destino,
+      puntoEncuentro: puntoEncuentro ?? null,
+      fecha,
+      hora,
+      cuposTotal: nuevoTotal,
+      cuposDisponibles: nuevoTotal - ocupados,
+      descripcionVehiculo: descripcionVehiculo?.trim() || viaje.descripcionVehiculo,
+      estado: estado ?? viaje.estado,
+      origenLat: origenLat ?? null,
+      origenLng: origenLng ?? null,
+      destinoLat: destinoLat ?? null,
+      destinoLng: destinoLng ?? null,
+    },
+    include: { conductor: { select: { nombre: true, telefono: true } } },
+  })
+
+  res.json({
+    ...viajeActualizado,
+    conductorNombre: viajeActualizado.conductor.nombre,
+    conductorTelefono: viajeActualizado.conductor.telefono,
+  })
+})
+
 app.delete('/api/viajes/:id', auth, async (req: Request, res: Response) => {
-  const viajeId = parseInt(req.params['id'] ?? '0')
+  const viajeId = idParam(req.params['id'])
   const userId = req.usuario!.id
 
   const viaje = await prisma.viaje.findUnique({ where: { id: viajeId } })
@@ -242,9 +304,8 @@ app.delete('/api/viajes/:id', auth, async (req: Request, res: Response) => {
   res.json({ message: 'Viaje eliminado correctamente' })
 })
 
-// PATCH /api/viajes/:id/hora
 app.patch('/api/viajes/:id/hora', auth, async (req: Request, res: Response) => {
-  const viajeId = parseInt(req.params['id'] ?? '0')
+  const viajeId = idParam(req.params['id'])
   const userId = req.usuario!.id
   const { hora } = req.body as { hora: string }
 
@@ -279,9 +340,8 @@ app.patch('/api/viajes/:id/hora', auth, async (req: Request, res: Response) => {
   })
 })
 
-// GET /api/viajes/:id/pasajeros
 app.get('/api/viajes/:id/pasajeros', auth, async (req: Request, res: Response) => {
-  const viajeId = parseInt(req.params['id'] ?? '0')
+  const viajeId = idParam(req.params['id'])
   const userId = req.usuario!.id
 
   const viaje = await prisma.viaje.findUnique({ where: { id: viajeId } })
@@ -303,11 +363,10 @@ app.get('/api/viajes/:id/pasajeros', auth, async (req: Request, res: Response) =
   res.json(uniones.map((u) => u.usuario))
 })
 
-// POST /api/viajes/:id/unirse
 app.post('/api/viajes/:id/unirse', auth, async (req: Request, res: Response) => {
   await expirarViajes()
 
-  const viajeId = parseInt(req.params['id'] ?? '0')
+  const viajeId = idParam(req.params['id'])
   const userId = req.usuario!.id
 
   const viaje = await prisma.viaje.findUnique({ where: { id: viajeId } })
@@ -354,9 +413,8 @@ app.post('/api/viajes/:id/unirse', auth, async (req: Request, res: Response) => 
   })
 })
 
-// DELETE /api/viajes/:id/unirse
 app.delete('/api/viajes/:id/unirse', auth, async (req: Request, res: Response) => {
-  const viajeId = parseInt(req.params['id'] ?? '0')
+  const viajeId = idParam(req.params['id'])
   const userId = req.usuario!.id
 
   const union = await prisma.pasajeroViaje.findUnique({
@@ -382,11 +440,9 @@ app.delete('/api/viajes/:id/unirse', auth, async (req: Request, res: Response) =
   res.json({ message: 'Has abandonado el viaje' })
 })
 
-// ── Usuarios ──────────────────────────────────────────────────────────────────
-
 app.get('/api/usuarios/:id', async (req: Request, res: Response) => {
   const usuario = await prisma.usuario.findUnique({
-    where: { id: parseInt(req.params['id'] ?? '0') },
+    where: { id: idParam(req.params['id']) },
     select: {
       id: true,
       nombre: true,
@@ -408,7 +464,6 @@ app.get('/api/usuarios/:id', async (req: Request, res: Response) => {
   res.json(usuario)
 })
 
-// PATCH /api/usuarios/me/rol — onboarding: viajero | conductor (sin vehículo aún)
 app.patch('/api/usuarios/me/rol', auth, async (req: Request, res: Response) => {
   const { rol } = req.body as { rol?: 'viajero' | 'conductor' }
   if (rol !== 'viajero' && rol !== 'conductor') {
@@ -428,7 +483,6 @@ app.patch('/api/usuarios/me/rol', auth, async (req: Request, res: Response) => {
     return
   }
 
-  // Conductor: marca rol pero aún debe completar vehículo
   const usuario = await prisma.usuario.update({
     where: { id: req.usuario!.id },
     data: {
@@ -439,7 +493,6 @@ app.patch('/api/usuarios/me/rol', auth, async (req: Request, res: Response) => {
   res.json(usuarioPublico(usuario))
 })
 
-// PATCH /api/usuarios/me/vehiculo — perfil conductor + cierra onboarding
 app.patch('/api/usuarios/me/vehiculo', auth, async (req: Request, res: Response) => {
   const { placa, marcaVehiculo, modeloVehiculo, colorVehiculo, puestosVehiculo } = req.body as {
     placa?: string
