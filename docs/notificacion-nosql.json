@@ -1,0 +1,21 @@
+{
+  "_id": "66f1a2b3c4d5e6f789012345",
+  "idUsuario": 12,
+  "tipo": "pasajero_unido",
+  "titulo": "Nuevo pasajero en tu ruta",
+  "mensaje": "Andrea Campos se unió a Aguitas → Campus UJAP",
+  "leida": false,
+  "creadoEn": "2026-09-30T19:45:00.000Z",
+  "payload": {
+    "idViaje": 42,
+    "idPasajero": 7,
+    "origen": "Aguitas",
+    "destino": "Campus UJAP",
+    "cuposDisponibles": 2
+  },
+  "canal": ["in_app", "email"],
+  "meta": {
+    "app": "RideUJAP",
+    "version": "1.0"
+  }
+}

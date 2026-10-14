@@ -2,7 +2,6 @@ import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { clerkActivo } from '@/plugins/clerk'
 import LandingView from '../views/LandingView.vue'
-import HomeView from '../views/HomeView.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -21,7 +20,7 @@ const router = createRouter({
     {
       path: '/inicio',
       name: 'inicio',
-      component: HomeView,
+      component: () => import('../views/MisViajesView.vue'),
       meta: { requiereAuth: true },
     },
     {
@@ -74,11 +73,10 @@ const router = createRouter({
       component: () => import('../views/PublicarViajeView.vue'),
       meta: { requiereAuth: true, requiereConductor: true },
     },
+    // Alias: Mis viajes vivía aparte; ahora es Mi panel
     {
       path: '/mis-viajes',
-      name: 'mis-viajes',
-      component: () => import('../views/MisViajesView.vue'),
-      meta: { requiereAuth: true },
+      redirect: '/inicio',
     },
   ],
 })

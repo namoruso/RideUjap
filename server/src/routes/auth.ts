@@ -49,7 +49,7 @@ function validarContrasena(pwd: string, correo?: string, nombre?: string): boole
 
 // ── POST /api/auth/registro ───────────────────────────────────────────────────
 router.post('/registro', async (req: Request, res: Response) => {
-  const { nombre, correo, telefono, esConductor, contrasena } = req.body as {
+  const { nombre, correo, telefono, contrasena } = req.body as {
     nombre: string
     correo: string
     telefono: string
@@ -268,7 +268,7 @@ router.post('/clerk/sync', async (req: Request, res: Response) => {
     return
   }
 
-  const { telefono = '', esConductor = false, nombre } = req.body as {
+  const { telefono = '', nombre } = req.body as {
     telefono?: string
     esConductor?: boolean
     nombre?: string

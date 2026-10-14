@@ -16,6 +16,9 @@ export interface Usuario {
 
 export type UsuarioPublico = Usuario
 
+/** Lo que el conductor ve de cada pasajero unido a su viaje. */
+export type Pasajero = Pick<Usuario, 'id' | 'nombre' | 'telefono'>
+
 export interface Viaje {
   id: number
   origen: string
@@ -78,4 +81,22 @@ export interface DatosRegistro {
 export interface RespuestaAuth {
   usuario: UsuarioPublico
   token: string
+}
+
+// ── Notificaciones (MongoDB) ──────────────────────────────────────────────────
+
+export type TipoNotificacion =
+  | 'pasajero_unido'
+  | 'pasajero_abandono'
+  | 'viaje_actualizado'
+  | 'viaje_cancelado'
+
+export interface Notificacion {
+  _id: string
+  tipo: TipoNotificacion
+  titulo: string
+  mensaje: string
+  leida: boolean
+  creadoEn: string
+  payload: { idViaje?: number; [k: string]: unknown }
 }

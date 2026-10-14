@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, onMounted } from 'vue'
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ClerkSessionSync from '@/components/ClerkSessionSync.vue'
+import CampanaNotificaciones from '@/components/CampanaNotificaciones.vue'
 import { clerkActivo } from '@/plugins/clerk'
 
 const auth = useAuthStore()
@@ -13,8 +14,6 @@ const usaClerk = clerkActivo()
 const esInicio = computed(() => route.name === 'landing')
 const esViajes = computed(() => route.path.startsWith('/viajes'))
 const esPanel = computed(() => route.name === 'inicio')
-const esPublicar = computed(() => route.name === 'publicar-viaje')
-const esMisViajes = computed(() => route.name === 'mis-viajes')
 const esAbout = computed(() => route.name === 'about')
 
 // ── Dark mode ─────────────────────────────────────────────────────────────────
@@ -31,6 +30,30 @@ function toggleDark() {
   aplicarTema(darkMode.value)
 }
 
+const menuAbierto = ref(false)
+const topbarEl = ref<HTMLElement | null>(null)
+const topbarAltura = ref('3.6rem')
+
+function actualizarAlturaTopbar() {
+  if (topbarEl.value) {
+    topbarAltura.value = `${topbarEl.value.offsetHeight}px`
+  }
+}
+
+function cerrarMenu() {
+  menuAbierto.value = false
+}
+
+function bloquearScroll(bloquear: boolean) {
+  document.body.style.overflow = bloquear ? 'hidden' : ''
+}
+
+watch(menuAbierto, (abierto) => {
+  bloquearScroll(abierto)
+  if (abierto) actualizarAlturaTopbar()
+})
+watch(() => route.fullPath, cerrarMenu)
+
 onMounted(() => {
   const guardado = localStorage.getItem('ride_dark')
   if (guardado !== null) {
@@ -39,13 +62,14 @@ onMounted(() => {
     darkMode.value = window.matchMedia('(prefers-color-scheme: dark)').matches
   }
   aplicarTema(darkMode.value)
+  actualizarAlturaTopbar()
+  window.addEventListener('resize', actualizarAlturaTopbar)
 })
 
-const menuAbierto = ref(false)
-
-function cerrarMenu() {
-  menuAbierto.value = false
-}
+onUnmounted(() => {
+  bloquearScroll(false)
+  window.removeEventListener('resize', actualizarAlturaTopbar)
+})
 
 function cerrarSesion() {
   auth.cerrarSesion()
@@ -57,7 +81,7 @@ function cerrarSesion() {
 <template>
   <div class="app-shell">
     <ClerkSessionSync v-if="usaClerk" />
-    <header class="topbar">
+    <header ref="topbarEl" class="topbar">
       <RouterLink class="brand" to="/" aria-label="RideUJAP, ir al inicio" @click="cerrarMenu">
         <img src="/Logo-UJAP2.jpg" alt="" class="brand-logo" />
         <span class="brand-copy">
@@ -69,17 +93,13 @@ function cerrarSesion() {
       <nav class="nav-desktop" aria-label="Navegación principal">
         <RouterLink to="/" :class="{ 'is-active': esInicio }">Inicio</RouterLink>
         <RouterLink to="/viajes" :class="{ 'is-active': esViajes }">Viajes</RouterLink>
-        <template v-if="auth.estaAutenticado">
-          <RouterLink to="/inicio" :class="{ 'is-active': esPanel }">Mi panel</RouterLink>
-          <RouterLink
-            v-if="auth.puedePublicar"
-            to="/publicar"
-            :class="{ 'is-active': esPublicar }"
-          >
-            Publicar
-          </RouterLink>
-          <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }">Mis viajes</RouterLink>
-        </template>
+        <RouterLink
+          v-if="auth.estaAutenticado"
+          to="/inicio"
+          :class="{ 'is-active': esPanel }"
+        >
+          Mi panel
+        </RouterLink>
         <RouterLink to="/about" :class="{ 'is-active': esAbout }">Acerca de</RouterLink>
       </nav>
 
@@ -134,6 +154,7 @@ function cerrarSesion() {
         <!-- Zona usuario (desktop) -->
         <div class="zona-usuario nav-desktop">
           <template v-if="auth.estaAutenticado">
+            <CampanaNotificaciones />
             <div class="usuario-chip">
               <div class="avatar-chip">{{ auth.usuario?.nombre?.charAt(0)?.toUpperCase() }}</div>
               <span class="nombre-usuario">{{ auth.usuario?.nombre }}</span>
@@ -186,45 +207,49 @@ function cerrarSesion() {
       </div>
     </header>
 
-    <!-- Menú móvil desplegable -->
-    <nav v-if="menuAbierto" class="nav-movil" aria-label="Menú móvil">
-      <RouterLink to="/" :class="{ 'is-active': esInicio }" @click="cerrarMenu">Inicio</RouterLink>
-      <RouterLink to="/viajes" :class="{ 'is-active': esViajes }" @click="cerrarMenu">Viajes</RouterLink>
-      <template v-if="auth.estaAutenticado">
-        <RouterLink to="/inicio" :class="{ 'is-active': esPanel }" @click="cerrarMenu">
-          Mi panel
-        </RouterLink>
+    <!-- Menú móvil: overlay fijo (no empuja el layout) -->
+    <div
+      v-if="menuAbierto"
+      class="nav-movil-overlay"
+      role="presentation"
+      :style="{ '--topbar-h': topbarAltura, paddingTop: 'var(--topbar-h)' }"
+      @click="cerrarMenu"
+    >
+      <nav
+        class="nav-movil"
+        aria-label="Menú móvil"
+        @click.stop
+      >
+        <RouterLink to="/" :class="{ 'is-active': esInicio }" @click="cerrarMenu">Inicio</RouterLink>
+        <RouterLink to="/viajes" :class="{ 'is-active': esViajes }" @click="cerrarMenu">Viajes</RouterLink>
         <RouterLink
-          v-if="auth.puedePublicar"
-          to="/publicar"
-          :class="{ 'is-active': esPublicar }"
+          v-if="auth.estaAutenticado"
+          to="/inicio"
+          :class="{ 'is-active': esPanel }"
           @click="cerrarMenu"
         >
-          Publicar viaje
+          Mi panel
         </RouterLink>
-        <RouterLink to="/mis-viajes" :class="{ 'is-active': esMisViajes }" @click="cerrarMenu">
-          Mis viajes
-        </RouterLink>
-      </template>
-      <RouterLink to="/about" :class="{ 'is-active': esAbout }" @click="cerrarMenu">Acerca de</RouterLink>
+        <RouterLink to="/about" :class="{ 'is-active': esAbout }" @click="cerrarMenu">Acerca de</RouterLink>
 
-      <div class="nav-movil-footer">
-        <template v-if="auth.estaAutenticado">
-          <span class="nombre-movil">{{ auth.usuario?.nombre }}</span>
-          <button type="button" class="btn-cerrar-sesion" @click="cerrarSesion">
-            Cerrar sesión
-          </button>
-        </template>
-        <template v-else>
-          <RouterLink to="/login" class="btn-registrarse btn-full" @click="cerrarMenu"
-            >Iniciar sesión</RouterLink
-          >
-          <RouterLink to="/registro" class="btn-registrarse btn-full" @click="cerrarMenu"
-            >Registrarse</RouterLink
-          >
-        </template>
-      </div>
-    </nav>
+        <div class="nav-movil-footer">
+          <template v-if="auth.estaAutenticado">
+            <span class="nombre-movil">{{ auth.usuario?.nombre }}</span>
+            <button type="button" class="btn-cerrar-sesion" @click="cerrarSesion">
+              Cerrar sesión
+            </button>
+          </template>
+          <template v-else>
+            <RouterLink to="/login" class="btn-registrarse btn-full" @click="cerrarMenu"
+              >Iniciar sesión</RouterLink
+            >
+            <RouterLink to="/registro" class="btn-registrarse btn-full" @click="cerrarMenu"
+              >Registrarse</RouterLink
+            >
+          </template>
+        </div>
+      </nav>
+    </div>
 
     <RouterView />
 
@@ -238,7 +263,7 @@ function cerrarSesion() {
 <style scoped>
 .app-shell {
   display: grid;
-  grid-template-rows: auto auto 1fr auto;
+  grid-template-rows: auto 1fr auto;
   min-height: 100vh;
   width: 100%;
 }
@@ -456,25 +481,48 @@ function cerrarSesion() {
   color: #dc2626;
 }
 
-/* ── Menú móvil ── */
+/* ── Menú móvil (overlay fijo bajo el topbar sticky) ── */
+.nav-movil-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  background: color-mix(in srgb, #000 38%, transparent);
+  animation: fadeIn 0.15s ease;
+}
+@media (min-width: 768px) {
+  .nav-movil-overlay {
+    display: none;
+  }
+}
+
 .nav-movil {
   display: flex;
   flex-direction: column;
   background: var(--color-background);
   border-bottom: 1px solid var(--color-border);
+  border-radius: 0 0 14px 14px;
   padding: 0.5rem 0;
+  max-height: min(70dvh, calc(100dvh - var(--topbar-h, 3.6rem)));
+  overflow-y: auto;
+  box-shadow: 0 12px 28px color-mix(in srgb, #000 18%, transparent);
   animation: slideDown 0.15s ease;
 }
-@media (min-width: 768px) {
-  .nav-movil {
-    display: none;
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
 @keyframes slideDown {
   from {
     opacity: 0;
-    transform: translateY(-6px);
+    transform: translateY(-8px);
   }
   to {
     opacity: 1;

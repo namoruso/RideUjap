@@ -3,7 +3,8 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useViajesStore } from '@/stores/viajes'
 import { useAuthStore } from '@/stores/auth'
-import type { UsuarioPublico } from '@/types'
+import { API_URL } from '@/config'
+import type { Pasajero, UsuarioPublico } from '@/types'
 import TarjetaUsuario from '@/components/TarjetaUsuario.vue'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
@@ -18,7 +19,6 @@ const conductor = ref<UsuarioPublico | null>(null)
 const mensaje = ref('')
 const mensajeError = ref('')
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 const viajeId = computed(() => Number(route.params['id']))
 const viaje = computed(() => store.getViajeById(viajeId.value))
@@ -89,7 +89,7 @@ async function handleAbandonar() {
   else mensajeError.value = result.mensaje
 }
 
-const pasajeros = ref<UsuarioPublico[]>([])
+const pasajeros = ref<Pasajero[]>([])
 const nuevaHora = ref('')
 const mostrarModalEditarHora = ref(false)
 const mostrarModalConfirmacion = ref(false)
@@ -109,8 +109,8 @@ async function confirmarEliminarViaje() {
   const result = await store.eliminarViaje(viajeId.value)
   if (result.ok) {
     // Usamos el mensaje de la app, pero podríamos redirigir tras un timeout corto
-    router.push('/mis-viajes')
-  } else {
+    router.push('/inicio')
+} else {
     mensajeError.value = result.mensaje
   }
 }

@@ -1,13 +1,23 @@
 <script setup lang="ts">
-import { nextTick, onMounted, reactive, ref } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import type { NuevoViaje } from '@/types'
 import MapaTrayecto, { type InfoRuta, type PuntoMapa } from '@/components/MapaTrayecto.vue'
+import InputLugar from '@/components/InputLugar.vue'
+import { estaEnCarabobo } from '@/services/googleMaps'
+import { hoyIso, salidaEsFutura } from '@/utils/fechas'
 
-const auth = useAuthStore()
+defineProps<{ enviando?: boolean; errorServidor?: string | null }>()
 const emit = defineEmits<{ publicar: [viaje: NuevoViaje] }>()
 
-const hoy = new Date().toISOString().split('T')[0] as string
+const auth = useAuthStore()
+const hoy = hoyIso()
+
+function vehiculoPorDefecto(): string {
+  const u = auth.usuario
+  if (!u?.placa) return ''
+  return [u.marcaVehiculo, u.modeloVehiculo, u.colorVehiculo].filter(Boolean).join(' ') + `, placa ${u.placa}`
+}
 
 const form = reactive({
   origen: '',
@@ -16,67 +26,68 @@ const form = reactive({
   fecha: hoy,
   hora: '',
   cuposDisponibles: 3,
-  descripcionVehiculo: '',
-  origenLat: null as number | null,
-  origenLng: null as number | null,
-  destinoLat: null as number | null,
-  destinoLng: null as number | null,
+  descripcionVehiculo: vehiculoPorDefecto(),
 })
 
 const origenMapa = ref<PuntoMapa | null>(null)
 const destinoMapa = ref<PuntoMapa | null>(null)
 const infoRuta = ref<InfoRuta>(null)
-const mapaRef = ref<InstanceType<typeof MapaTrayecto> | null>(null)
-const inputOrigen = ref<HTMLInputElement | null>(null)
-const inputDestino = ref<HTMLInputElement | null>(null)
-
 const errores = reactive<Partial<Record<string, string>>>({})
-const enviado = ref(false)
+
+const fueraDeCarabobo = computed(
+  () =>
+    [origenMapa.value, destinoMapa.value].some((p) => p && !estaEnCarabobo(p)),
+)
 
 function onOrigen(p: PuntoMapa) {
   origenMapa.value = p
-  form.origenLat = p.lat
-  form.origenLng = p.lng
   if (p.label) form.origen = p.label
-  else if (!form.origen.trim()) form.origen = `Punto A (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`
+  errores['origen'] = undefined
 }
 
 function onDestino(p: PuntoMapa) {
   destinoMapa.value = p
-  form.destinoLat = p.lat
-  form.destinoLng = p.lng
   if (p.label) form.destino = p.label
-  else if (!form.destino.trim()) form.destino = `Punto B (${p.lat.toFixed(4)}, ${p.lng.toFixed(4)})`
-}
-
-async function buscarEnMapa(tipo: 'origen' | 'destino') {
-  const texto = tipo === 'origen' ? form.origen : form.destino
-  const punto = await mapaRef.value?.geocodeTexto(texto, tipo)
-  if (punto) {
-    if (tipo === 'origen') onOrigen(punto)
-    else onDestino(punto)
-  }
+  errores['destino'] = undefined
 }
 
 function validar(): boolean {
-  errores['origen'] = form.origen.trim() ? undefined : '¿Cuál es el punto de salida?'
-  errores['destino'] = form.destino.trim() ? undefined : '¿Cuál es el destino?'
-  errores['fecha'] = form.fecha ? undefined : '¿Qué día sales?'
-  errores['hora'] = form.hora ? undefined : '¿A qué hora sales?'
+  const o = origenMapa.value
+  const d = destinoMapa.value
+  errores['origen'] = !form.origen.trim()
+    ? '¿Cuál es el punto de salida?'
+    : !o
+      ? 'Elige una sugerencia, usa tu ubicación o marca el punto en el mapa'
+      : undefined
+  errores['destino'] = !form.destino.trim()
+    ? '¿Cuál es el destino?'
+    : !d
+      ? 'Elige una sugerencia o marca el punto en el mapa'
+      : o && Math.abs(o.lat - d.lat) < 1e-4 && Math.abs(o.lng - d.lng) < 1e-4
+        ? 'El destino debe ser distinto del origen'
+        : undefined
+  errores['fecha'] = !form.fecha
+    ? '¿Qué día sales?'
+    : form.fecha < hoy
+      ? 'La fecha no puede estar en el pasado'
+      : undefined
+  errores['hora'] = !form.hora
+    ? '¿A qué hora sales?'
+    : form.fecha && !salidaEsFutura(form.fecha, form.hora)
+      ? 'La hora de salida ya pasó'
+      : undefined
   errores['descripcionVehiculo'] = form.descripcionVehiculo.trim()
     ? undefined
     : '¿Cómo es tu vehículo (marca, modelo, color, placa)?'
   errores['cuposDisponibles'] =
-    form.cuposDisponibles >= 1 && form.cuposDisponibles <= 8
+    Number.isInteger(form.cuposDisponibles) && form.cuposDisponibles >= 1 && form.cuposDisponibles <= 8
       ? undefined
       : 'Los cupos deben estar entre 1 y 8'
   return !Object.values(errores).some(Boolean)
 }
 
 function handleSubmit() {
-  if (!validar()) return
-  if (!auth.estaAutenticado) return
-
+  if (!validar() || !auth.estaAutenticado || !origenMapa.value || !destinoMapa.value) return
   emit('publicar', {
     origen: form.origen.trim(),
     destino: form.destino.trim(),
@@ -85,44 +96,12 @@ function handleSubmit() {
     hora: form.hora,
     cuposDisponibles: form.cuposDisponibles,
     descripcionVehiculo: form.descripcionVehiculo.trim(),
-    origenLat: form.origenLat,
-    origenLng: form.origenLng,
-    destinoLat: form.destinoLat,
-    destinoLng: form.destinoLng,
+    origenLat: origenMapa.value.lat,
+    origenLng: origenMapa.value.lng,
+    destinoLat: destinoMapa.value.lat,
+    destinoLng: destinoMapa.value.lng,
   })
-  enviado.value = true
-
-  form.origen = ''
-  form.destino = ''
-  form.puntoEncuentro = ''
-  form.fecha = hoy
-  form.hora = ''
-  form.cuposDisponibles = 3
-  form.descripcionVehiculo = ''
-  form.origenLat = null
-  form.origenLng = null
-  form.destinoLat = null
-  form.destinoLng = null
-  origenMapa.value = null
-  destinoMapa.value = null
-  infoRuta.value = null
-
-  setTimeout(() => (enviado.value = false), 3000)
 }
-
-onMounted(async () => {
-  await nextTick()
-  // Espera a que el mapa cargue Places antes de enganchar autocomplete
-  const tryAttach = () => {
-    if (!mapaRef.value?.listo) {
-      setTimeout(tryAttach, 200)
-      return
-    }
-    if (inputOrigen.value) mapaRef.value.attachAutocomplete(inputOrigen.value, 'origen')
-    if (inputDestino.value) mapaRef.value.attachAutocomplete(inputDestino.value, 'destino')
-  }
-  tryAttach()
-})
 </script>
 
 <template>
@@ -131,7 +110,7 @@ onMounted(async () => {
       <header class="card-head">
         <div>
           <h2 id="ruta-titulo">Datos del recorrido</h2>
-          <p>Escribe un lugar (Google lo ubica) o marca A/B en el mapa.</p>
+          <p>Escribe un lugar y elige una sugerencia de Google, usa tu ubicación o marca A/B en el mapa.</p>
         </div>
         <span class="paso">Paso 1 de 2</span>
       </header>
@@ -142,19 +121,15 @@ onMounted(async () => {
             <span class="dot dot--a" aria-hidden="true" />
             Punto de salida <span class="req">*</span>
           </label>
-          <div class="input-row">
-            <input
-              id="fp-origen"
-              ref="inputOrigen"
-              v-model="form.origen"
-              type="text"
-              placeholder="Ej. Naguanagua, Prebo, San Diego…"
-              autocomplete="off"
-              :class="{ 'input-error': errores['origen'] }"
-              @keydown.enter.prevent="buscarEnMapa('origen')"
-            />
-            <button type="button" class="btn-mini" @click="buscarEnMapa('origen')">Buscar</button>
-          </div>
+          <InputLugar
+            id="fp-origen"
+            v-model="form.origen"
+            placeholder="Escribe una dirección o usa tu ubicación"
+            :invalido="!!errores['origen']"
+            :confirmado="!!origenMapa"
+            @seleccionar="onOrigen"
+            @invalidar="origenMapa = null"
+          />
           <span v-if="errores['origen']" class="error-msg">{{ errores['origen'] }}</span>
         </div>
 
@@ -163,19 +138,15 @@ onMounted(async () => {
             <span class="dot dot--b" aria-hidden="true" />
             Destino <span class="req">*</span>
           </label>
-          <div class="input-row">
-            <input
-              id="fp-destino"
-              ref="inputDestino"
-              v-model="form.destino"
-              type="text"
-              placeholder="Campus UJAP, San Diego…"
-              autocomplete="off"
-              :class="{ 'input-error': errores['destino'] }"
-              @keydown.enter.prevent="buscarEnMapa('destino')"
-            />
-            <button type="button" class="btn-mini" @click="buscarEnMapa('destino')">Buscar</button>
-          </div>
+          <InputLugar
+            id="fp-destino"
+            v-model="form.destino"
+            placeholder="Campus UJAP, San Diego…"
+            :invalido="!!errores['destino']"
+            :confirmado="!!destinoMapa"
+            @seleccionar="onDestino"
+            @invalidar="destinoMapa = null"
+          />
           <span v-if="errores['destino']" class="error-msg">{{ errores['destino'] }}</span>
         </div>
       </div>
@@ -193,7 +164,6 @@ onMounted(async () => {
       </div>
 
       <MapaTrayecto
-        ref="mapaRef"
         :origen="origenMapa"
         :destino="destinoMapa"
         editable
@@ -202,6 +172,9 @@ onMounted(async () => {
         @update:destino="onDestino"
         @update:ruta="infoRuta = $event"
       />
+      <p v-if="fueraDeCarabobo" class="aviso-zona" role="status">
+        Un punto está fuera de Carabobo. RideUJAP está pensado para recorridos de la zona del campus.
+      </p>
       <p v-if="infoRuta" class="ruta-info">
         Trayecto estimado: <strong>{{ infoRuta.distanciaTexto }}</strong> ·
         <strong>{{ infoRuta.duracionTexto }}</strong>
@@ -266,8 +239,10 @@ onMounted(async () => {
     </section>
 
     <div class="acciones">
-      <button type="submit" class="btn-publicar">Publicar mi viaje ahora</button>
-      <p v-if="enviado" class="exito" role="status">Viaje publicado correctamente</p>
+      <button type="submit" class="btn-publicar" :disabled="enviando">
+        {{ enviando ? 'Publicando…' : 'Publicar mi viaje ahora' }}
+      </button>
+      <p v-if="errorServidor" class="error-msg" role="alert">{{ errorServidor }}</p>
     </div>
     <p class="legal">
       Al publicar confirmas cumplir las normas de tránsito y el reglamento de convivencia UJAP. RideUJAP
@@ -377,10 +352,6 @@ onMounted(async () => {
   color: var(--color-text);
   opacity: 0.7;
 }
-.input-row {
-  display: flex;
-  gap: 0.45rem;
-}
 .campo input,
 .campo select {
   width: 100%;
@@ -400,17 +371,6 @@ onMounted(async () => {
 }
 .campo input.input-error {
   border-color: #dc2626;
-}
-.btn-mini {
-  flex-shrink: 0;
-  padding: 0 0.85rem;
-  border: 1px solid var(--color-border);
-  border-radius: 0.75rem;
-  background: var(--color-background);
-  color: var(--ride-green-fg);
-  font-weight: 700;
-  font-size: 0.78rem;
-  cursor: pointer;
 }
 .error-msg {
   font-size: 0.78rem;
@@ -446,10 +406,14 @@ onMounted(async () => {
 .btn-publicar:hover {
   background: var(--ride-green-hover);
 }
-.exito {
-  margin: 0;
-  font-weight: 700;
-  color: var(--ride-green-fg);
+.aviso-zona {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: #b45309;
+}
+.btn-publicar:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
 }
 .legal {
   margin: 0;

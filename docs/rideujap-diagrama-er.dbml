@@ -1,0 +1,47 @@
+Table Usuario {
+  id int [pk, increment]
+  nombre varchar(120) [not null]
+  correo varchar(180) [unique, not null]
+  telefono varchar(40) [not null, default: '']
+  esConductor boolean [not null, default: false]
+  placa varchar(20)
+  marcaVehiculo varchar(60)
+  modeloVehiculo varchar(60)
+  colorVehiculo varchar(40)
+  puestosVehiculo int
+  creadoEn timestamp [not null, default: `now()`]
+}
+
+Table Viaje {
+  id int [pk, increment]
+  origen varchar(200) [not null]
+  destino varchar(200) [not null]
+  puntoEncuentro varchar(200)
+  fecha varchar(20) [not null]
+  hora varchar(10) [not null]
+  cuposTotal int [not null]
+  cuposDisponibles int [not null]
+  descripcionVehiculo varchar(200) [not null]
+  estado varchar(40) [not null, default: 'disponible']
+  origenLat double
+  origenLng double
+  destinoLat double
+  destinoLng double
+  creadoEn timestamp [not null, default: `now()`]
+  idConductor int [not null]
+}
+
+Table PasajeroViaje {
+  id int [pk, increment]
+  unidoEn timestamp [not null, default: `now()`]
+  idUsuario int [not null]
+  idViaje int [not null]
+
+  indexes {
+    (idUsuario, idViaje) [unique]
+  }
+}
+
+Ref: Viaje.idConductor > Usuario.id
+Ref: PasajeroViaje.idUsuario > Usuario.id
+Ref: PasajeroViaje.idViaje > Viaje.id

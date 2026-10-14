@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useViajesStore } from '@/stores/viajes'
@@ -9,9 +10,17 @@ const store = useViajesStore()
 const auth = useAuthStore()
 const router = useRouter()
 
+const enviando = ref(false)
+const errorServidor = ref<string | null>(null)
+
 async function handlePublicar(nuevoViaje: NuevoViaje) {
-  await store.publicarViaje(nuevoViaje)
-  router.push('/viajes')
+  if (enviando.value) return
+  enviando.value = true
+  errorServidor.value = null
+  const res = await store.publicarViaje(nuevoViaje)
+  enviando.value = false
+  if (res.ok) await router.push('/inicio')
+  else errorServidor.value = res.mensaje
 }
 </script>
 
@@ -32,7 +41,11 @@ async function handlePublicar(nuevoViaje: NuevoViaje) {
 
     <div class="layout">
       <div class="main-col">
-        <FormularioPublicarViaje @publicar="handlePublicar" />
+        <FormularioPublicarViaje
+          :enviando="enviando"
+          :error-servidor="errorServidor"
+          @publicar="handlePublicar"
+        />
       </div>
 
       <aside class="side" aria-label="Consejos para conductores">

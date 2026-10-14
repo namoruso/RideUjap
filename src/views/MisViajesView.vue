@@ -5,8 +5,9 @@ import { useViajesStore } from '@/stores/viajes'
 import { useAuthStore } from '@/stores/auth'
 import EstadoVacio from '@/components/EstadoVacio.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
-import type { UsuarioPublico, Viaje } from '@/types'
+import type { Pasajero, Viaje } from '@/types'
 import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
+import { hoyIso } from '@/utils/fechas'
 
 type TabMisViajes = 'activos' | 'completados' | 'cancelados'
 
@@ -17,7 +18,7 @@ const router = useRouter()
 const tab = ref<TabMisViajes>('activos')
 const busqueda = ref('')
 const eliminandoId = ref<number | null>(null)
-const pasajerosPorViaje = reactive<Record<number, UsuarioPublico[]>>({})
+const pasajerosPorViaje = reactive<Record<number, Pasajero[]>>({})
 const cargandoPasajeros = ref(false)
 
 const modalEliminar = ref(false)
@@ -26,16 +27,23 @@ const modalAviso = ref(false)
 const avisoTitulo = ref('')
 const avisoMensaje = ref('')
 
-const misViajes = computed(() =>
-  auth.usuario ? store.viajesDelUsuario(auth.usuario.id) : [],
-)
+const misViajes = computed(() => {
+  if (!auth.usuario) return []
+  const uid = auth.usuario.id
+  const publicados = store.viajes.filter((v) => v.idConductor === uid)
+  const unidos = store.viajes.filter(
+    (v) => store.misUniones.includes(v.id) && v.idConductor !== uid,
+  )
+  const porId = new Map<number, Viaje>()
+  for (const v of [...publicados, ...unidos]) porId.set(v.id, v)
+  return [...porId.values()].sort((a, b) => {
+    if (a.fecha !== b.fecha) return b.fecha.localeCompare(a.fecha)
+    return b.hora.localeCompare(a.hora)
+  })
+})
 
-function hoyIso(): string {
-  const d = new Date()
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const day = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${day}`
+function soyConductor(v: Viaje): boolean {
+  return auth.usuario != null && v.idConductor === auth.usuario.id
 }
 
 function esActivo(v: Viaje): boolean {
@@ -79,13 +87,14 @@ const viajesTab = computed(() => {
 })
 
 const metricas = computed(() => {
-  const activos = misViajes.value.filter(esActivo)
-  const cuposLibres = activos.reduce((s, v) => s + v.cuposDisponibles, 0)
-  const cuposOcupados = activos.reduce((s, v) => s + (v.cuposTotal - v.cuposDisponibles), 0)
-  const cuposTotal = activos.reduce((s, v) => s + v.cuposTotal, 0)
-  const deHoy = activos.filter((v) => v.fecha === hoyIso()).length
+  const publicadosActivos = misViajes.value.filter((v) => esActivo(v) && soyConductor(v))
+  const todosActivos = misViajes.value.filter(esActivo)
+  const cuposLibres = publicadosActivos.reduce((s, v) => s + v.cuposDisponibles, 0)
+  const cuposOcupados = publicadosActivos.reduce((s, v) => s + (v.cuposTotal - v.cuposDisponibles), 0)
+  const cuposTotal = publicadosActivos.reduce((s, v) => s + v.cuposTotal, 0)
+  const deHoy = todosActivos.filter((v) => v.fecha === hoyIso()).length
   return {
-    activos: activos.length,
+    activos: todosActivos.length,
     deHoy,
     pasajeros: cuposOcupados,
     cuposLibres,
@@ -134,7 +143,7 @@ function iniciales(nombre: string) {
 
 async function cargarPasajerosActivos() {
   if (!auth.usuario) return
-  const ids = misViajes.value.filter(esActivo).map((v) => v.id)
+  const ids = misViajes.value.filter((v) => esActivo(v) && soyConductor(v)).map((v) => v.id)
   if (ids.length === 0) return
   cargandoPasajeros.value = true
   try {
@@ -185,6 +194,18 @@ async function confirmarCancelarViaje() {
   }
 }
 
+const abandonandoId = ref<number | null>(null)
+
+async function abandonarComoPasajero(id: number) {
+  abandonandoId.value = id
+  try {
+    const r = await store.abandonarViaje(id)
+    if (!r.ok) mostrarAviso('No se pudo abandonar', r.mensaje)
+  } finally {
+    abandonandoId.value = null
+  }
+}
+
 function irDetalle(id: number) {
   router.push(`/viajes/${id}`)
 }
@@ -205,19 +226,19 @@ watch(
 <template>
   <main class="mis-viajes page-content">
     <nav class="crumb" aria-label="Ruta">
-      <RouterLink to="/inicio">Inicio</RouterLink>
+      <RouterLink to="/">Inicio</RouterLink>
       <span>/</span>
-      <span class="crumb-muted">Mis viajes</span>
-      <span>/</span>
-      <span class="crumb-on">Gestión de rutas</span>
+      <span class="crumb-on">Mi panel</span>
     </nav>
 
     <header class="hero">
       <div class="hero-copy">
-        <h1>Mis viajes</h1>
+        <h1>Mi panel</h1>
         <p>
-          Administra las rutas que publicaste como conductor, consulta quién se unió y revisa el
-          estado de tus trayectos hacia o desde el campus UJAP.
+          Tus rutas publicadas y los asientos que reservaste. Desde
+          <RouterLink to="/viajes">Viajes</RouterLink>
+          puedes buscar cupos
+          <template v-if="auth.puedePublicar"> o publicar una nueva salida</template>.
         </p>
       </div>
       <RouterLink
@@ -375,9 +396,17 @@ watch(
     <section class="lista" aria-label="Lista de mis viajes">
       <EstadoVacio
         v-if="misViajes.length === 0"
-        titulo="Todavía no publicas una ruta"
-        mensaje="Cuando vayas en carro al campus, publica origen, hora y cupos. Alguien de la UJAP puede ocupar el asiento vacío."
-      />
+        titulo="Tu panel está vacío"
+        :mensaje="
+          auth.puedePublicar
+            ? 'Publica una ruta desde Viajes o reserva un asiento en una salida existente.'
+            : 'Busca un asiento en Viajes. Cuando te unas a una ruta, aparece aquí.'
+        "
+      >
+        <template #accion>
+          <RouterLink to="/viajes" class="btn-ghost">Ir a viajes</RouterLink>
+        </template>
+      </EstadoVacio>
 
       <EstadoVacio
         v-else-if="viajesTab.length === 0"
@@ -399,9 +428,13 @@ watch(
           <div class="card-top">
             <div>
               <div class="badges">
-                <span v-if="esActivo(viaje)" class="badge badge--live">
+                <span v-if="esActivo(viaje) && soyConductor(viaje)" class="badge badge--live">
                   <span class="dot" aria-hidden="true" />
-                  Ruta activa publicada
+                  Publicada · conductor
+                </span>
+                <span v-else-if="esActivo(viaje)" class="badge badge--live">
+                  <span class="dot" aria-hidden="true" />
+                  Reservada · pasajero
                 </span>
                 <span v-else-if="esCompletado(viaje)" class="badge">Completado</span>
                 <span v-else class="badge badge--warn">Cancelado</span>
@@ -444,7 +477,7 @@ watch(
             </div>
           </div>
 
-          <div v-if="esActivo(viaje)" class="pasajeros">
+          <div v-if="esActivo(viaje) && soyConductor(viaje)" class="pasajeros">
             <div class="pasajeros-head">
               <h3>
                 Pasajeros unidos
@@ -471,7 +504,7 @@ watch(
                 <div class="avatar">{{ iniciales(p.nombre) }}</div>
                 <div>
                   <p class="p-nombre">{{ p.nombre }}</p>
-                  <p class="p-meta">{{ p.correo }}</p>
+                  <p class="p-meta">{{ p.telefono || 'Sin teléfono' }}</p>
                 </div>
               </li>
             </ul>
@@ -481,7 +514,7 @@ watch(
             <p class="foot-note">Comunidad institucional · sin cobros en RideUJAP</p>
             <div class="foot-actions">
               <button
-                v-if="esActivo(viaje)"
+                v-if="esActivo(viaje) && soyConductor(viaje)"
                 type="button"
                 class="btn-ghost btn-danger"
                 :disabled="eliminandoId === viaje.id"
@@ -489,8 +522,17 @@ watch(
               >
                 {{ eliminandoId === viaje.id ? 'Eliminando…' : 'Cancelar viaje' }}
               </button>
+              <button
+                v-else-if="esActivo(viaje) && !soyConductor(viaje)"
+                type="button"
+                class="btn-ghost btn-danger"
+                :disabled="abandonandoId === viaje.id"
+                @click="abandonarComoPasajero(viaje.id)"
+              >
+                {{ abandonandoId === viaje.id ? 'Saliendo…' : 'Abandonar asiento' }}
+              </button>
               <button type="button" class="btn-ghost" @click="irDetalle(viaje.id)">
-                {{ esActivo(viaje) ? 'Gestionar viaje' : 'Ver detalle' }}
+                {{ esActivo(viaje) && soyConductor(viaje) ? 'Gestionar viaje' : 'Ver detalle' }}
               </button>
               <button
                 v-if="esActivo(viaje)"
@@ -498,13 +540,13 @@ watch(
                 class="btn-primary"
                 @click="irDetalle(viaje.id)"
               >
-                Ver abordaje
+                {{ soyConductor(viaje) ? 'Ver abordaje' : 'Ver encuentro' }}
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </button>
               <RouterLink
-                v-else-if="auth.puedePublicar && esCompletado(viaje)"
+                v-else-if="auth.puedePublicar && esCompletado(viaje) && soyConductor(viaje)"
                 to="/publicar"
                 class="btn-primary btn-link"
               >
