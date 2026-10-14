@@ -10,7 +10,8 @@
     "db:push": "prisma db push",
     "db:seed": "tsx seed.ts",
     "db:setup": "prisma generate && prisma db push && tsx seed.ts",
-    "test": "tsx --test test/*.test.ts"
+    "test": "tsx --test test/viajes.test.ts",
+    "test:integration": "RUN_INTEGRATION=1 tsx --test test/api.integration.test.ts"
   },
   "keywords": [],
   "author": "",

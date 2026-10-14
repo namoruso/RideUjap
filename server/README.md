@@ -64,6 +64,14 @@ pnpm db:setup   # prisma generate + db push + seed
 
 Se generan al unirse/abandonar un viaje (conductor) y al editar, cambiar la hora o eliminar un viaje (pasajeros).
 
+## Pruebas
+
+```bash
+pnpm test                # unitarias (validador de viajes), sin base de datos
+pnpm test:integration    # API real contra Postgres local (pnpm docker:db); crea y borra sus datos
+MONGODB_TEST_URI=mongodb://localhost:27018 pnpm test:integration   # incluye notificaciones/SSE
+```
+
 ## Endpoints
 
 ### Autenticación (`/api/auth`)
