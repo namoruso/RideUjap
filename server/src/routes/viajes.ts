@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from 'express'
 import prisma from '../db'
 import { verificarToken } from '../middleware/auth'
 import { wrapAsync, idParam } from '../lib/http'
+import { notificar } from '../notificaciones'
 import {
   ESTADOS_VIAJE,
   salidaDe,
@@ -16,6 +17,18 @@ const auth = wrapAsync(verificarToken)
 const CONDUCTOR_LISTA = {
   select: { nombre: true, telefono: true, placa: true, modeloVehiculo: true, colorVehiculo: true },
 } as const
+const rutaDe = (v: { origen: string; destino: string }) => `${v.origen} → ${v.destino}`
+
+async function idsPasajeros(idViaje: number): Promise<number[]> {
+  const uniones = await prisma.pasajeroViaje.findMany({ where: { idViaje }, select: { idUsuario: true } })
+  return uniones.map((u) => u.idUsuario)
+}
+
+async function nombreDe(idUsuario: number): Promise<string> {
+  const u = await prisma.usuario.findUnique({ where: { id: idUsuario }, select: { nombre: true } })
+  return u?.nombre ?? 'Un pasajero'
+}
+
 const CONDUCTOR_BASICO = { select: { nombre: true, telefono: true } } as const
 
 router.param('id', (req, res, next, value: string) => {
@@ -181,6 +194,21 @@ router.put('/:id', auth, wrapAsync(async (req: Request, res: Response) => {
     },
     include: { conductor: CONDUCTOR_BASICO },
   })
+  const cambios = cambioHorario || d.origen !== viaje.origen || d.destino !== viaje.destino
+  if (cambios || estado === 'cancelado') {
+    const cancelado = estado === 'cancelado' && viaje.estado !== 'cancelado'
+    for (const idPasajero of await idsPasajeros(viajeId)) {
+      void notificar(
+        idPasajero,
+        cancelado ? 'viaje_cancelado' : 'viaje_actualizado',
+        cancelado ? 'Viaje cancelado' : 'Tu viaje cambió',
+        cancelado
+          ? `El conductor canceló ${rutaDe(actualizado)}`
+          : `${rutaDe(actualizado)} ahora sale el ${actualizado.fecha} a las ${actualizado.hora}`,
+        { idViaje: viajeId, origen: actualizado.origen, destino: actualizado.destino },
+      )
+    }
+  }
   res.json(serializarViaje(actualizado))
 }))
 
@@ -195,10 +223,18 @@ router.delete('/:id', auth, wrapAsync(async (req: Request, res: Response) => {
     res.status(403).json({ error: 'No tienes permiso para eliminar este viaje' })
     return
   }
+  const pasajeros = await idsPasajeros(viajeId)
   await prisma.$transaction([
     prisma.pasajeroViaje.deleteMany({ where: { idViaje: viajeId } }),
     prisma.viaje.delete({ where: { id: viajeId } }),
   ])
+  for (const idPasajero of pasajeros) {
+    void notificar(idPasajero, 'viaje_cancelado', 'Viaje cancelado', `El conductor canceló ${rutaDe(viaje)}`, {
+      idViaje: viajeId,
+      origen: viaje.origen,
+      destino: viaje.destino,
+    })
+  }
   res.json({ message: 'Viaje eliminado correctamente' })
 }))
 
@@ -229,6 +265,15 @@ router.patch('/:id/hora', auth, wrapAsync(async (req: Request, res: Response) =>
     data: { hora },
     include: { conductor: CONDUCTOR_BASICO },
   })
+  for (const idPasajero of await idsPasajeros(viajeId)) {
+    void notificar(
+      idPasajero,
+      'viaje_actualizado',
+      'Cambió la hora de tu viaje',
+      `${rutaDe(actualizado)} ahora sale a las ${hora}`,
+      { idViaje: viajeId, origen: actualizado.origen, destino: actualizado.destino, hora },
+    )
+  }
   res.json({ message: 'Hora del viaje actualizada', viaje: serializarViaje(actualizado) })
 }))
 
@@ -298,6 +343,19 @@ router.post('/:id/unirse', auth, wrapAsync(async (req: Request, res: Response) =
     res.status(400).json({ error: 'No hay cupos disponibles' })
     return
   }
+  void notificar(
+    actualizado.idConductor,
+    'pasajero_unido',
+    'Nuevo pasajero en tu ruta',
+    `${await nombreDe(userId)} se unió a ${rutaDe(actualizado)}`,
+    {
+      idViaje: viajeId,
+      idPasajero: userId,
+      origen: actualizado.origen,
+      destino: actualizado.destino,
+      cuposDisponibles: actualizado.cuposDisponibles,
+    },
+  )
   res.json({ message: 'Te has unido al viaje', viaje: serializarViaje(actualizado) })
 }))
 
@@ -312,6 +370,7 @@ router.delete('/:id/unirse', auth, wrapAsync(async (req: Request, res: Response)
     res.status(400).json({ error: 'No estás en este viaje' })
     return
   }
+  const viaje = await prisma.viaje.findUnique({ where: { id: viajeId } })
 
   await prisma.$transaction(async (tx) => {
     await tx.pasajeroViaje.delete({ where: { id: union.id } })
@@ -321,6 +380,15 @@ router.delete('/:id/unirse', auth, wrapAsync(async (req: Request, res: Response)
     })
     await tx.viaje.updateMany({ where: { id: viajeId, estado: 'lleno' }, data: { estado: 'disponible' } })
   })
+  if (viaje) {
+    void notificar(
+      viaje.idConductor,
+      'pasajero_abandono',
+      'Un pasajero dejó tu viaje',
+      `${await nombreDe(userId)} abandonó ${rutaDe(viaje)}`,
+      { idViaje: viajeId, idPasajero: userId, origen: viaje.origen, destino: viaje.destino },
+    )
+  }
   res.json({ message: 'Has abandonado el viaje' })
 }))
 

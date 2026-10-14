@@ -6,6 +6,8 @@ import prisma from './db'
 import authRouter from './routes/auth'
 import viajesRouter from './routes/viajes'
 import usuariosRouter from './routes/usuarios'
+import notificacionesRouter from './routes/notificaciones'
+import { asegurarIndices } from './notificaciones'
 
 dotenv.config({ path: path.resolve(__dirname, '../.env') })
 
@@ -33,11 +35,14 @@ app.use('/api/auth', authRouter)
 
 app.use('/api/viajes', viajesRouter)
 app.use('/api/usuarios', usuariosRouter)
+app.use('/api/notificaciones', notificacionesRouter)
 
 app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
   console.error(err)
   res.status(500).json({ error: 'Error interno del servidor' })
 })
+
+void asegurarIndices().catch((e) => console.warn('⚠️  MongoDB no disponible:', e.message))
 
 app.listen(port, () => {
   console.log(`✅ Backend RideUJAP corriendo en http://localhost:${port}`)

@@ -3,6 +3,7 @@ import { computed, ref, onMounted } from 'vue'
 import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import ClerkSessionSync from '@/components/ClerkSessionSync.vue'
+import CampanaNotificaciones from '@/components/CampanaNotificaciones.vue'
 import { clerkActivo } from '@/plugins/clerk'
 
 const auth = useAuthStore()
@@ -153,6 +154,7 @@ function cerrarSesion() {
           :aria-label="menuAbierto ? 'Cerrar menú' : 'Abrir menú'"
           @click="menuAbierto = !menuAbierto"
         >
+            <CampanaNotificaciones />
           <svg
             v-if="!menuAbierto"
             width="20"

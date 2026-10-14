@@ -1,6 +1,6 @@
 # RideUJAP — Backend
 
-API REST del proyecto RideUJAP, construida con **Node.js + Express + TypeScript**, usando **Prisma ORM con SQLite** como capa de persistencia.
+API REST del proyecto RideUJAP, construida con **Node.js + Express + TypeScript**, usando **Prisma ORM con PostgreSQL** (Docker local o Supabase) y **MongoDB** para las notificaciones.
 
 ## Requisitos
 
@@ -27,7 +27,10 @@ Variables requeridas:
 |----------------|------------------------------------------|----------------------------------|
 | `PORT`         | Puerto del servidor                      | `3001`                           |
 | `JWT_SECRET`   | Clave secreta para firmar JWT            | `mi-clave-super-secreta`         |
-| `DATABASE_URL` | Ruta al archivo SQLite de Prisma         | `file:./rideujap.db`            |
+| `DATABASE_URL` | PostgreSQL (con Supabase: pooler, puerto 6543, `?pgbouncer=true`) | `postgresql://...` |
+| `DIRECT_URL`   | PostgreSQL directo (puerto 5432), para `db push` / migraciones | igual a `DATABASE_URL` en local |
+| `MONGODB_URI`  | MongoDB Atlas (opcional). Vacío = sin notificaciones | `mongodb+srv://...` |
+| `MONGODB_DB`   | Nombre de la base Mongo                  | `rideujap`                       |
 
 ## Ejecución en desarrollo
 
@@ -39,15 +42,27 @@ El servidor quedará activo en `http://localhost:3001`.
 
 ## Base de datos
 
-La BD es SQLite gestionada por Prisma. Después de clonar el repo, ejecuta:
+**PostgreSQL** (usuarios, viajes, pasajeros) gestionado por Prisma. En local: `pnpm docker:db` desde la raíz.
+Para **Supabase**: crea el proyecto, copia las cadenas de *Connect → ORMs → Prisma* a `DATABASE_URL` (pooler) y `DIRECT_URL` (directa) y ejecuta:
 
 ```bash
-npx prisma db push
+pnpm db:setup   # prisma generate + db push + seed
 ```
 
-Esto crea/actualiza el archivo `rideujap.db` según el schema definido en `prisma/schema.prisma`.
+**MongoDB** (colección `notificaciones`, índice `{idUsuario, creadoEn}` y TTL de 90 días): se crea sola al arrancar si `MONGODB_URI` está definida.
 
 ---
+
+## Notificaciones (`/api/notificaciones`, requieren auth)
+
+| Método | Ruta                  | Descripción                                             |
+|--------|-----------------------|---------------------------------------------------------|
+| GET    | `/`                   | Lista paginada (`?limite=20&antes=<_id>`) + `noLeidas`  |
+| PATCH  | `/:id/leida`          | Marca una como leída                                    |
+| PATCH  | `/leidas`             | Marca todas como leídas                                 |
+| GET    | `/stream`             | SSE en vivo (consumir con `fetch` + `Authorization`)    |
+
+Se generan al unirse/abandonar un viaje (conductor) y al editar, cambiar la hora o eliminar un viaje (pasajeros).
 
 ## Endpoints
 
