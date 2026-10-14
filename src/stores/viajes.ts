@@ -4,6 +4,7 @@ import { useAuthStore } from '@/stores/auth'
 import { viajesEjemplo } from '@/data/ejemplos'
 import type { Viaje, FiltroViajes, NuevoViaje } from '@/types'
 import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
+import { API_URL } from '@/config'
 
 const SS_KEY = 'ride_mis_uniones'
 
@@ -21,8 +22,6 @@ export const useViajesStore = defineStore('viajes', () => {
   function guardarUniones() {
     sessionStorage.setItem(SS_KEY, JSON.stringify(misUniones.value))
   }
-
-  const API_URL = String(import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim()
 
   async function cargarViajes() {
     cargando.value = true
@@ -42,7 +41,7 @@ export const useViajesStore = defineStore('viajes', () => {
     }
   }
 
-  async function publicarViaje(nuevoViaje: NuevoViaje): Promise<boolean> {
+  async function publicarViaje(nuevoViaje: NuevoViaje): Promise<{ ok: boolean; mensaje: string }> {
     const auth = useAuthStore()
     try {
       const res = await fetch(`${API_URL}/viajes`, {
@@ -50,13 +49,13 @@ export const useViajesStore = defineStore('viajes', () => {
         headers: { 'Content-Type': 'application/json', ...(await auth.authHeaders()) },
         body: JSON.stringify(nuevoViaje),
       })
-      if (!res.ok) throw new Error('Error al publicar el viaje')
-      const viajeCreado: Viaje = await res.json()
-      viajes.value.unshift(viajeCreado)
-      return true
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) return { ok: false, mensaje: data.error ?? 'Error al publicar el viaje' }
+      viajes.value.unshift(data as Viaje)
+      return { ok: true, mensaje: 'Viaje publicado' }
     } catch (e: unknown) {
       console.error(e)
-      return false
+      return { ok: false, mensaje: 'Error de conexión con el servidor' }
     }
   }
 

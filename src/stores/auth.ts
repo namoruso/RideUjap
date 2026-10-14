@@ -1,11 +1,11 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
+import { API_URL } from '@/config'
 import type { UsuarioPublico, DatosLogin, DatosRegistro } from '@/types'
 
 const LS_TOKEN = 'ride_token'
 const LS_USUARIO = 'ride_usuario'
 
-const API_URL = String(import.meta.env.VITE_API_URL || 'http://localhost:3001/api').trim()
 
 type ClerkBrowser = {
   loaded?: boolean
