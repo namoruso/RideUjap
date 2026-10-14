@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import { ref, reactive } from 'vue'
-import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const auth = useAuthStore()
-const router = useRouter()
 
 // Los 3 pasos en la misma vista: 'correo' → 'codigo' → 'exito'
 const paso = ref<'correo' | 'codigo' | 'exito'>('correo')

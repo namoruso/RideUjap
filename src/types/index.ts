@@ -16,6 +16,9 @@ export interface Usuario {
 
 export type UsuarioPublico = Usuario
 
+/** Lo que el conductor ve de cada pasajero unido a su viaje. */
+export type Pasajero = Pick<Usuario, 'id' | 'nombre' | 'telefono'>
+
 export interface Viaje {
   id: number
   origen: string

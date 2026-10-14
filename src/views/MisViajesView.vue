@@ -5,7 +5,7 @@ import { useViajesStore } from '@/stores/viajes'
 import { useAuthStore } from '@/stores/auth'
 import EstadoVacio from '@/components/EstadoVacio.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
-import type { UsuarioPublico, Viaje } from '@/types'
+import type { Pasajero, Viaje } from '@/types'
 import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
 import { hoyIso } from '@/utils/fechas'
 
@@ -18,7 +18,7 @@ const router = useRouter()
 const tab = ref<TabMisViajes>('activos')
 const busqueda = ref('')
 const eliminandoId = ref<number | null>(null)
-const pasajerosPorViaje = reactive<Record<number, UsuarioPublico[]>>({})
+const pasajerosPorViaje = reactive<Record<number, Pasajero[]>>({})
 const cargandoPasajeros = ref(false)
 
 const modalEliminar = ref(false)
@@ -504,7 +504,7 @@ watch(
                 <div class="avatar">{{ iniciales(p.nombre) }}</div>
                 <div>
                   <p class="p-nombre">{{ p.nombre }}</p>
-                  <p class="p-meta">{{ p.correo }}</p>
+                  <p class="p-meta">{{ p.telefono || 'Sin teléfono' }}</p>
                 </div>
               </li>
             </ul>

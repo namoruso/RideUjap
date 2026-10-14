@@ -5,6 +5,7 @@ import prisma from '../db'
 import type { JwtPayload } from '../types'
 
 declare global {
+  // eslint-disable-next-line @typescript-eslint/no-namespace -- patrón estándar para ampliar Express.Request
   namespace Express {
     interface Request {
       usuario?: JwtPayload

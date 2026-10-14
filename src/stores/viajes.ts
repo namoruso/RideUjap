@@ -2,7 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
 import { viajesEjemplo } from '@/data/ejemplos'
-import type { Viaje, FiltroViajes, NuevoViaje } from '@/types'
+import type { Viaje, FiltroViajes, NuevoViaje, Pasajero } from '@/types'
 import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
 import { API_URL } from '@/config'
 
@@ -169,7 +169,7 @@ export const useViajesStore = defineStore('viajes', () => {
     }
   }
 
-  async function obtenerPasajeros(id: number): Promise<any[]> {
+  async function obtenerPasajeros(id: number): Promise<Pasajero[]> {
     const auth = useAuthStore()
     try {
       const res = await fetch(`${API_URL}/viajes/${id}/pasajeros`, {

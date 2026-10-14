@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useViajesStore } from '@/stores/viajes'
 import { useAuthStore } from '@/stores/auth'
 import { API_URL } from '@/config'
-import type { UsuarioPublico } from '@/types'
+import type { Pasajero, UsuarioPublico } from '@/types'
 import TarjetaUsuario from '@/components/TarjetaUsuario.vue'
 import EncabezadoRide from '@/components/EncabezadoRide.vue'
 import ModalDialog from '@/components/ModalDialog.vue'
@@ -89,7 +89,7 @@ async function handleAbandonar() {
   else mensajeError.value = result.mensaje
 }
 
-const pasajeros = ref<UsuarioPublico[]>([])
+const pasajeros = ref<Pasajero[]>([])
 const nuevaHora = ref('')
 const mostrarModalEditarHora = ref(false)
 const mostrarModalConfirmacion = ref(false)
