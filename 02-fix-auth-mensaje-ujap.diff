@@ -1,0 +1,19 @@
+diff --git a/src/stores/auth.ts b/src/stores/auth.ts
+index ee18052..b1480f1 100644
+--- a/src/stores/auth.ts
++++ b/src/stores/auth.ts
+@@ -248,7 +248,13 @@ export const useAuthStore = defineStore('auth', () => {
+         })
+         const data = await res.json()
+         if (!res.ok) {
+-          error.value = data.error ?? 'No se pudo sincronizar la sesión Clerk'
++          const raw = String(data.error ?? '')
++          if (res.status === 403 && raw.toLowerCase().includes('@ujap.edu.ve')) {
++            error.value =
++              'Solo la comunidad UJAP puede entrar. Usa un correo que termine en @ujap.edu.ve e intenta de nuevo.'
++          } else {
++            error.value = raw || 'No se pudo sincronizar la sesión Clerk'
++          }
+           limpiarSesion()
+           return false
+         }

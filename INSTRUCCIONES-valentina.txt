@@ -1,0 +1,53 @@
+RideUJAP — Valentina: 3 commits + PR (NO subir .env)
+====================================================
+
+Base: main actualizado. Rama sugerida: feat/valentina-perfil-auth-docs
+
+0) Preparación
+   git checkout main
+   git pull origin main
+   git checkout -b feat/valentina-perfil-auth-docs
+   Copia a la raíz del repo (junto a package.json):
+     01-feat-perfil-conductor.diff
+     02-fix-auth-mensaje-ujap.diff
+     03-docs-readme-supabase.diff
+     INSTRUCCIONES-valentina.txt
+
+1) Commit 1 — perfil conductor
+   git apply 01-feat-perfil-conductor.diff
+   git add src/views/PerfilConductorView.vue src/router/index.ts \
+     src/components/TarjetaViaje.vue src/views/DetalleViajeView.vue
+   git status
+   git commit -m "feat(perfil): vista pública del conductor con vehículo y rutas"
+
+2) Commit 2 — mensaje dominio UJAP
+   git apply 02-fix-auth-mensaje-ujap.diff
+   git add src/stores/auth.ts
+   git commit -m "fix(auth): mensaje claro si el correo no es institucional"
+
+3) Commit 3 — docs Supabase
+   git apply 03-docs-readme-supabase.diff
+   git add README.md
+   git commit -m "docs(readme): pasos para conectar Postgres en Supabase"
+
+4) Push + PR
+   git push -u origin feat/valentina-perfil-auth-docs
+   gh pr create --base main --title "feat: perfil de conductor y docs de Supabase (Valentina)" --body "$(cat <<'EOF'
+## Summary
+- Perfil público del conductor (`/conductores/:id`)
+- Mensaje claro si el correo no es @ujap.edu.ve
+- README: pasos para conectar Supabase (sin secretos)
+
+## Test plan
+- [ ] Abrir un viaje y entrar al perfil del conductor
+- [ ] Confirmar que README no incluye passwords
+- [ ] No hay archivos .env en el PR
+EOF
+)"
+
+5) Limpieza local
+   rm -f 01-feat-perfil-conductor.diff 02-fix-auth-mensaje-ujap.diff \
+     03-docs-readme-supabase.diff INSTRUCCIONES-valentina.txt
+
+NUNCA: git add .env server/.env ni pegar keys en el README.
+Si apply falla: git apply --3way <archivo.diff>

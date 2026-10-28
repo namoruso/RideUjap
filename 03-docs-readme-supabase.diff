@@ -1,0 +1,24 @@
+diff --git a/README.md b/README.md
+index f42463c..8041ac2 100644
+--- a/README.md
++++ b/README.md
+@@ -45,6 +45,19 @@ Seed: `prueba@ujap.edu.ve` / `Ujap2026!`
+ 
+ Clerk y Google Maps se activan con keys en `.env` (ver `.env.example`).
+ 
++## Postgres en Supabase
++
++1. En el Dashboard de Supabase: **Connect → ORMs → Prisma**.
++2. Copia **dos** URLs (sin pegarlas en Git):
++   - `DATABASE_URL` → pooler (puerto **6543**) para la API en runtime.
++   - `DIRECT_URL` → sesión/directa (puerto **5432**) para `prisma db push` / migraciones.
++3. Pégalas solo en `server/.env` local (ese archivo **no** se versiona).
++4. En el frontend, `VITE_API_URL` sigue apuntando a tu API (`http://localhost:3001/api` en local).
++5. Verifica: `GET http://localhost:3001/api/health` debe responder `db: "up"`.
++
++Nunca subas contraseñas, `CLERK_SECRET_KEY`, ni `MONGODB_URI` al repositorio. Usa `.env.example` como plantilla.
++
++
+ ## Recommended IDE Setup
+ 
+ ### Compile and Hot-Reload for Development
