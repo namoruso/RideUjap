@@ -1,0 +1,56 @@
+RideUJAP — Andrea: 3 commits + PR (NO subir .env)
+=================================================
+
+Base: main actualizado. Rama sugerida: feat/andrea-viajes-ux-tests
+
+0) Preparación
+   git checkout main
+   git pull origin main
+   git checkout -b feat/andrea-viajes-ux-tests
+   Copia a la raíz del repo:
+     01-fix-viajes-sin-demo.diff
+     02-feat-detalle-compartir.diff
+     03-test-viajes-zonas.diff
+     INSTRUCCIONES-andrea.txt
+
+1) Commit 1 — error de API visible
+   git apply 01-fix-viajes-sin-demo.diff
+   git add src/stores/viajes.ts src/views/ViajesView.vue
+   git commit -m "fix(viajes): muestra error de API en lugar de datos demo"
+
+2) Commit 2 — compartir viaje
+   git apply 02-feat-detalle-compartir.diff
+   git add src/views/DetalleViajeView.vue
+   git commit -m "feat(detalle): botón para compartir enlace del viaje"
+
+3) Commit 3 — tests de zonas
+   git apply 03-test-viajes-zonas.diff
+   git add src/utils/__tests__/lugares.spec.ts
+   git commit -m "test(viajes): amplía cobertura de coincidencia de zonas"
+
+4) Push + PR
+   git push -u origin feat/andrea-viajes-ux-tests
+   gh pr create --base main --title "feat: UX de viajes, compartir enlace y tests (Andrea)" --body "$(cat <<'EOF'
+## Summary
+- Error visible si la API no responde (sin datos demo silenciosos)
+- Compartir enlace del viaje en el detalle
+- Más tests de coincidencia de zonas (San Diego / Campus UJAP)
+
+## Test plan
+- [ ] Apagar API y ver mensaje de error en /viajes
+- [ ] Encender API y listar viajes reales
+- [ ] En un detalle, usar Compartir viaje
+- [ ] pnpm test:unit -- src/utils/__tests__/lugares.spec.ts
+- [ ] No hay .env en el PR
+EOF
+)"
+
+5) Limpieza local
+   rm -f 01-fix-viajes-sin-demo.diff 02-feat-detalle-compartir.diff \
+     03-test-viajes-zonas.diff INSTRUCCIONES-andrea.txt
+
+NUNCA: git add .env server/.env
+Si apply falla: git apply --3way <archivo.diff>
+
+Nota: si Valentina aún no mergeó su PR, puedes basarte en main igual:
+estos parches no tocan los mismos archivos.

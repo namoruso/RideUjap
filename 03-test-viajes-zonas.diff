@@ -1,0 +1,28 @@
+diff --git a/src/utils/__tests__/lugares.spec.ts b/src/utils/__tests__/lugares.spec.ts
+index 0708a13..7213f94 100644
+--- a/src/utils/__tests__/lugares.spec.ts
++++ b/src/utils/__tests__/lugares.spec.ts
+@@ -26,3 +26,23 @@ describe('blobLugaresViaje', () => {
+     expect(blobLugaresViaje({ origen: 'A', destino: 'B', puntoEncuentro: 'C' })).toBe('A B C')
+   })
+ })
++
++describe('lugarCoincide zonas RideUJAP', () => {
++  it('encuentra San Diego en origen geocodificado', () => {
++    expect(
++      lugarCoincide('San Diego, Carabobo, Venezuela', 'San Diego'),
++    ).toBe(true)
++  })
++
++  it('encuentra San Diego aunque esté solo en el destino', () => {
++    expect(lugarCoincide('Campus UJAP Prebo San Diego', 'san diego')).toBe(true)
++  })
++
++  it('entiende alias de Campus UJAP', () => {
++    expect(lugarCoincide('Entrada UJAP · Portón 1', 'Campus UJAP')).toBe(true)
++  })
++
++  it('no confunde Prebo con Naguanagua', () => {
++    expect(lugarCoincide('Prebo, Valencia', 'Naguanagua')).toBe(false)
++  })
++})

@@ -1,0 +1,43 @@
+diff --git a/src/stores/viajes.ts b/src/stores/viajes.ts
+index 999fe1b..9d4c7a0 100644
+--- a/src/stores/viajes.ts
++++ b/src/stores/viajes.ts
+@@ -1,7 +1,6 @@
+ import { ref, computed } from 'vue'
+ import { defineStore } from 'pinia'
+ import { useAuthStore } from '@/stores/auth'
+-import { viajesEjemplo } from '@/data/ejemplos'
+ import type { Viaje, FiltroViajes, NuevoViaje, Pasajero } from '@/types'
+ import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
+ import { API_URL } from '@/config'
+@@ -32,10 +31,11 @@ export const useViajesStore = defineStore('viajes', () => {
+       viajes.value = await res.json()
+       usandoDemo.value = false
+     } catch (e: unknown) {
+-      console.warn('API de viajes no disponible, usando rutas de ejemplo.', e)
+-      viajes.value = viajesEjemplo.map((v) => ({ ...v }))
+-      usandoDemo.value = true
+-      error.value = null
++      console.error('API de viajes no disponible.', e)
++      viajes.value = []
++      usandoDemo.value = false
++      error.value =
++        'No se pudieron cargar los viajes. Comprueba que la API esté en http://localhost:3001 y reintenta.'
+     } finally {
+       cargando.value = false
+     }
+diff --git a/src/views/ViajesView.vue b/src/views/ViajesView.vue
+index 425831c..a32bf2f 100644
+--- a/src/views/ViajesView.vue
++++ b/src/views/ViajesView.vue
+@@ -62,8 +62,8 @@ onMounted(() => store.cargarViajes())
+       </RouterLink>
+     </header>
+ 
+-    <p v-if="store.usandoDemo" class="aviso-demo" role="status">
+-      Estás viendo rutas de ejemplo. Cuando el servidor esté arriba, se cargan las reales.
++    <p v-if="store.error" class="aviso-demo" role="alert">
++      {{ store.error }}
+     </p>
+ 
+     <FiltroViajes :key="resetFiltros" :inicial="filtroActivo" @filtrar="handleFiltrar" />
