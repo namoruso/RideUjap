@@ -19,6 +19,25 @@ const conductor = ref<UsuarioPublico | null>(null)
 const mensaje = ref('')
 const mensajeError = ref('')
 
+const avisoCompartir = ref('')
+
+async function compartirViaje() {
+  avisoCompartir.value = ''
+  const url = `${window.location.origin}/viajes/${viajeId.value}`
+  const titulo = viaje.value ? `${viaje.value.origen} → ${viaje.value.destino}` : 'Viaje RideUJAP'
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: titulo, text: 'Mira este viaje en RideUJAP', url })
+      avisoCompartir.value = 'Enlace compartido.'
+      return
+    }
+    await navigator.clipboard.writeText(url)
+    avisoCompartir.value = 'Enlace copiado al portapapeles.'
+  } catch {
+    avisoCompartir.value = 'No se pudo compartir. Copia la URL del navegador.'
+  }
+}
+
 
 const viajeId = computed(() => Number(route.params['id']))
 const viaje = computed(() => store.getViajeById(viajeId.value))
@@ -169,6 +188,12 @@ watch(viaje, async (v) => {
       <!-- Panel principal -->
       <section class="panel-viaje" aria-labelledby="detalle-titulo">
         <EncabezadoRide :titulo="`${viaje.origen} → ${viaje.destino}`" subtitulo="Detalle del viaje" />
+
+    <div class="compartir-bar">
+      <button type="button" class="btn-compartir" @click="compartirViaje">Compartir viaje</button>
+      <span v-if="avisoCompartir" class="aviso-compartir" role="status">{{ avisoCompartir }}</span>
+    </div>
+
 
         <div v-if="tieneMapa" class="mapa-bloque">
           <MapaTrayecto :origen="origenMapa" :destino="destinoMapa" height="240px" />
@@ -566,4 +591,24 @@ watch(viaje, async (v) => {
   text-decoration: none;
 }
 .enlace-perfil:hover { text-decoration: underline; }
+.compartir-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0.75rem 0 1.25rem;
+}
+.btn-compartir {
+  padding: 0.5rem 0.95rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--ride-green-border);
+  background: var(--ride-green-light);
+  color: var(--ride-green-fg);
+  font-weight: 750;
+  font-size: 0.85rem;
+  cursor: pointer;
+  font-family: inherit;
+}
+.btn-compartir:hover { background: var(--ride-green); color: #fff; }
+.aviso-compartir { font-size: 0.8rem; color: var(--color-text); }
 </style>
