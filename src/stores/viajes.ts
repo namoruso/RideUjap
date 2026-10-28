@@ -1,7 +1,6 @@
 import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import { useAuthStore } from '@/stores/auth'
-import { viajesEjemplo } from '@/data/ejemplos'
 import type { Viaje, FiltroViajes, NuevoViaje, Pasajero } from '@/types'
 import { blobLugaresViaje, lugarCoincide } from '@/utils/lugares'
 import { API_URL } from '@/config'
@@ -32,10 +31,11 @@ export const useViajesStore = defineStore('viajes', () => {
       viajes.value = await res.json()
       usandoDemo.value = false
     } catch (e: unknown) {
-      console.warn('API de viajes no disponible, usando rutas de ejemplo.', e)
-      viajes.value = viajesEjemplo.map((v) => ({ ...v }))
-      usandoDemo.value = true
-      error.value = null
+      console.error('API de viajes no disponible.', e)
+      viajes.value = []
+      usandoDemo.value = false
+      error.value =
+        'No se pudieron cargar los viajes. Comprueba que la API esté en http://localhost:3001 y reintenta.'
     } finally {
       cargando.value = false
     }
