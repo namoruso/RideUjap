@@ -74,7 +74,18 @@ const ultimoCupo = props.viaje.cuposDisponibles === 1 && props.viaje.estado === 
     </div>
 
     <div class="tarjeta-mid">
-      <div v-if="viaje.conductorNombre" class="conductor">
+      <RouterLink
+        v-if="viaje.conductorNombre && viaje.idConductor"
+        class="conductor conductor-link"
+        :to="`/conductores/${viaje.idConductor}`"
+      >
+        <div class="avatar">{{ viaje.conductorNombre.charAt(0).toUpperCase() }}</div>
+        <div>
+          <p class="nombre">{{ viaje.conductorNombre }}</p>
+          <p class="rol">Ver perfil del conductor</p>
+        </div>
+      </RouterLink>
+      <div v-else-if="viaje.conductorNombre" class="conductor">
         <div class="avatar">{{ viaje.conductorNombre.charAt(0).toUpperCase() }}</div>
         <div>
           <p class="nombre">{{ viaje.conductorNombre }}</p>
@@ -218,6 +229,13 @@ const ultimoCupo = props.viaje.cuposDisponibles === 1 && props.viaje.estado === 
   white-space: nowrap;
 }
 .meta-value--hora {
+  color: var(--ride-green-fg);
+}
+.conductor-link {
+  text-decoration: none;
+  color: inherit;
+}
+.conductor-link:hover .nombre {
   color: var(--ride-green-fg);
 }
 .conductor {

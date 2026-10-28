@@ -252,6 +252,11 @@ watch(viaje, async (v) => {
         <section v-if="conductor" aria-labelledby="conductor-titulo">
           <h2 id="conductor-titulo" class="panel-titulo">Conductor</h2>
           <TarjetaUsuario :usuario="conductor" />
+          <RouterLink
+            v-if="viaje?.idConductor"
+            class="enlace-perfil"
+            :to="`/conductores/${viaje.idConductor}`"
+          >Ver perfil completo →</RouterLink>
         </section>
 
         <section v-if="viaje.descripcionVehiculo" class="panel-vehiculo" aria-labelledby="vehiculo-titulo">
@@ -552,4 +557,13 @@ watch(viaje, async (v) => {
 }
 
 .cargando { text-align: center; padding: 3rem; opacity: 0.5; }
+.enlace-perfil {
+  display: inline-block;
+  margin-top: 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ride-green-fg);
+  text-decoration: none;
+}
+.enlace-perfil:hover { text-decoration: underline; }
 </style>
