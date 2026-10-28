@@ -62,8 +62,8 @@ onMounted(() => store.cargarViajes())
       </RouterLink>
     </header>
 
-    <p v-if="store.usandoDemo" class="aviso-demo" role="status">
-      Estás viendo rutas de ejemplo. Cuando el servidor esté arriba, se cargan las reales.
+    <p v-if="store.error" class="aviso-demo" role="alert">
+      {{ store.error }}
     </p>
 
     <FiltroViajes :key="resetFiltros" :inicial="filtroActivo" @filtrar="handleFiltrar" />
